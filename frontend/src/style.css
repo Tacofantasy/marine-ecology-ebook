@@ -1,0 +1,268 @@
+:root {
+  color: #10304a;
+  background: #f4fafc;
+  font-family: Inter, "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button,
+a {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #0d7490;
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 10;
+  top: 12px;
+  left: 12px;
+  padding: 10px 14px;
+  color: #fff;
+  background: #075985;
+  border-radius: 8px;
+  transform: translateY(-160%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(1120px, calc(100% - 40px));
+  min-height: 72px;
+  margin: 0 auto;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #10304a;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 50% 50% 50% 12px;
+  background: linear-gradient(145deg, #06b6d4, #075985);
+  transform: rotate(-35deg);
+}
+
+.phase-label,
+.eyebrow,
+.section-kicker,
+.service-label {
+  margin: 0;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.phase-label {
+  color: #48677a;
+  font-size: 0.85rem;
+}
+
+.page-shell {
+  width: min(1120px, calc(100% - 40px));
+  margin: 32px auto 64px;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(40px, 8vw, 88px);
+  color: #f6fdff;
+  background:
+    radial-gradient(circle at 82% 15%, rgba(103, 232, 249, 0.3), transparent 28%),
+    radial-gradient(circle at 10% 95%, rgba(20, 184, 166, 0.2), transparent 30%),
+    linear-gradient(135deg, #082f49, #075985 56%, #0e7490);
+  border-radius: 24px;
+  box-shadow: 0 18px 42px rgba(8, 47, 73, 0.18);
+}
+
+.eyebrow,
+.section-kicker,
+.service-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.eyebrow {
+  color: #a5f3fc;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  max-width: 720px;
+  margin: 16px 0;
+  font-size: clamp(2.35rem, 7vw, 5rem);
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+}
+
+.hero-copy {
+  max-width: 630px;
+  margin-bottom: 32px;
+  color: #d7f5fb;
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  line-height: 1.7;
+}
+
+.service-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  max-width: 680px;
+  padding: 18px 20px;
+  color: #10304a;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 16px;
+}
+
+.service-label {
+  color: #48677a;
+}
+
+.service-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 5px 0 0;
+  font-weight: 700;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #0d7490;
+}
+
+.is-ready .status-dot {
+  background: #15803d;
+}
+
+.is-error .status-dot {
+  background: #b91c1c;
+}
+
+.secondary-button {
+  min-height: 44px;
+  padding: 10px 16px;
+  color: #075985;
+  font-weight: 700;
+  background: #fff;
+  border: 1px solid #7dd3fc;
+  border-radius: 10px;
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: #ecfeff;
+  transform: translateY(-1px);
+}
+
+.secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.next-steps {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 32px;
+  align-items: start;
+  margin: 26px 0;
+  padding: 32px;
+  background: #fff;
+  border: 1px solid #d9edf2;
+  border-radius: 20px;
+}
+
+.section-kicker {
+  color: #0e7490;
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: 1.5rem;
+}
+
+ol {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding-left: 24px;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .site-header,
+  .page-shell {
+    width: min(100% - 28px, 1120px);
+  }
+
+  .site-header {
+    min-height: 62px;
+  }
+
+  .phase-label {
+    display: none;
+  }
+
+  .hero {
+    border-radius: 18px;
+  }
+
+  .service-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .next-steps {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

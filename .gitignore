@@ -1,0 +1,25 @@
+# IDE and operating-system files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Project-private tools and local configuration
+.tools/
+.env
+.env.*
+!.env.example
+
+# Java / Spring Boot
+backend/target/
+backend/*.log
+
+# Vue / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Runtime files
+uploads/
+logs/
