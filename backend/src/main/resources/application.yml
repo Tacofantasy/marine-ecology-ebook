@@ -1,6 +1,21 @@
 spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
   application:
     name: marine-ebook-api
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:${MYSQL_PORT:3307}/${MYSQL_DATABASE:marine_ebook}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    username: ${MYSQL_USER:marine_ebook}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  flyway:
+    locations: classpath:db/migration
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
 
 server:
   port: 8080

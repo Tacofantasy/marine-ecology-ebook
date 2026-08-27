@@ -11,7 +11,7 @@
 项目根目录提供 `compose.yaml`，其中仅定义 `mysql` 服务：
 
 - 使用 MySQL 8 镜像与命名 volume 保存数据；重启容器不会丢失数据。
-- 端口映射为本机 `3306`，供 Spring Boot 在开发时连接。
+- 默认端口映射为本机 `3307`，避免与已有 MySQL 冲突；可在本机 `.env` 调整，供 Spring Boot 在开发时连接。
 - 仓库提交 `.env.example`，列出数据库名、用户名和端口等非敏感配置；每位成员在本机复制为 `.env` 并设置自己的密码，`.env` 不进入 Git。
 - 成员通过 `docker compose up -d mysql` 启动自己的数据库实例。后续共享测试环境复用同一 Compose 思路，但不在本阶段实施。
 
