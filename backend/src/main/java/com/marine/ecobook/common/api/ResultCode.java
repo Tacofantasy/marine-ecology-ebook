@@ -11,6 +11,7 @@ public enum ResultCode {
     UNAUTHORIZED(40101, "请先登录", HttpStatus.UNAUTHORIZED),
     FORBIDDEN(40301, "无权执行此操作", HttpStatus.FORBIDDEN),
     NOT_FOUND(40401, "资源不存在", HttpStatus.NOT_FOUND),
+    METHOD_NOT_ALLOWED(40501, "不支持的请求方法", HttpStatus.METHOD_NOT_ALLOWED),
     CONFLICT(40901, "资源状态冲突", HttpStatus.CONFLICT),
     INTERNAL_ERROR(50000, "系统繁忙，请稍后重试", HttpStatus.INTERNAL_SERVER_ERROR);
 

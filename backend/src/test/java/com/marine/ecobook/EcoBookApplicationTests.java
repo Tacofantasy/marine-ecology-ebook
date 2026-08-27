@@ -74,6 +74,26 @@ class EcoBookApplicationTests {
     }
 
     @Test
+    void invalidMethodParameterReturnsValidationEnvelope() throws Exception {
+        mockMvc.perform(get("/api/test/constraint").param("keyword", ""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(ResultCode.BAD_REQUEST.code()))
+                .andExpect(jsonPath("$.message").value("关键词不能为空"))
+                .andExpect(jsonPath("$.data").doesNotExist())
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    void unsupportedHttpMethodReturnsMethodNotAllowedEnvelope() throws Exception {
+        mockMvc.perform(post("/api/health"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.code").value(ResultCode.METHOD_NOT_ALLOWED.code()))
+                .andExpect(jsonPath("$.message").value(ResultCode.METHOD_NOT_ALLOWED.message()))
+                .andExpect(jsonPath("$.data").doesNotExist())
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
     void unexpectedExceptionDoesNotExposeInternalMessage() throws Exception {
         mockMvc.perform(get("/api/test/unexpected"))
                 .andExpect(status().isInternalServerError())
@@ -100,6 +120,10 @@ class EcoBookApplicationTests {
 
         @GetMapping("/required")
         void required(@RequestParam String title) {
+        }
+
+        @GetMapping("/constraint")
+        void constraint(@RequestParam @NotBlank(message = "关键词不能为空") String keyword) {
         }
 
         @GetMapping("/unexpected")
