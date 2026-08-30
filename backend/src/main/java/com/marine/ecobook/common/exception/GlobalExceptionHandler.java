@@ -1,5 +1,8 @@
 package com.marine.ecobook.common.exception;
 
+import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.NotRoleException;
+import cn.dev33.satoken.exception.SaTokenException;
 import com.marine.ecobook.common.api.ApiResponse;
 import com.marine.ecobook.common.api.ResultCode;
 import jakarta.validation.ConstraintViolationException;
@@ -29,6 +32,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException exception) {
         return failure(exception.getResultCode(), exception.getMessage());
+    }
+
+    @ExceptionHandler(NotLoginException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotLogin(NotLoginException exception) {
+        return failure(ResultCode.UNAUTHORIZED, ResultCode.UNAUTHORIZED.message());
+    }
+
+    @ExceptionHandler(NotRoleException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotRole(NotRoleException exception) {
+        return failure(ResultCode.FORBIDDEN, ResultCode.FORBIDDEN.message());
+    }
+
+    @ExceptionHandler(SaTokenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSaToken(SaTokenException exception) {
+        return failure(ResultCode.UNAUTHORIZED, ResultCode.UNAUTHORIZED.message());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

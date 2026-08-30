@@ -19,3 +19,9 @@ mybatis-plus:
 
 server:
   port: 8080
+
+sa-token:
+  token-name: satoken
+  timeout: 7200
+  is-log: false
+  jwt-secret-key: ${SA_TOKEN_JWT_SECRET_KEY}

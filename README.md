@@ -4,17 +4,17 @@
 
 ## 技术栈
 
-- 后端：JDK 17、Spring Boot 3.5.9、Maven。
+- 后端：JDK 17、Spring Boot 3.5.9、Maven、Sa-Token（JWT）。
 - 前端：Vue 3、TypeScript、Vite。
 - 数据库：MySQL 8、MyBatis-Plus、Flyway。
-- 后续接入：JWT、Ant Design Vue。
+- 后续接入：Ant Design Vue、Redis 内容缓存。
 
 ## 本地启动
 
 首次执行时，先准备本机 Docker MySQL，再分别进入 `frontend` 与 `backend` 目录安装或下载依赖。
 
 ```powershell
-# 首次执行：复制环境模板并设置本机开发密码
+# 首次执行：复制环境模板并设置本机开发密码与 JWT 随机密钥
 Copy-Item .env.example .env
 
 # 启动 MySQL 8（可用 docker compose ps 查看状态）
@@ -35,6 +35,8 @@ MySQL 默认映射到本机 `3307`，避免与已有的 `3306` 服务冲突；�
 浏览器访问 Vite 输出的地址（默认 `http://localhost:5173`）。前端将 `/api` 代理至默认的 `http://localhost:8080`；可复制 `frontend/.env.example` 为 `frontend/.env.local` 后修改代理目标。
 
 健康检查：`GET http://localhost:8080/api/health`
+
+认证接口说明见 [docs/api/authentication.md](docs/api/authentication.md)。`.env` 中的 `SA_TOKEN_JWT_SECRET_KEY` 必须替换为至少 32 个随机字符，不能提交到 Git。
 
 Flyway 会在后端首次启动时创建数据库表和演示数据。演示管理员账号为 `admin`，初始密码为 `password`；该账号仅用于本地开发，登录功能完成后应立即修改密码。
 

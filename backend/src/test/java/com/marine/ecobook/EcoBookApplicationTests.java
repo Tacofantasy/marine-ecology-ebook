@@ -2,6 +2,7 @@ package com.marine.ecobook;
 
 import com.marine.ecobook.common.api.ResultCode;
 import com.marine.ecobook.common.exception.BusinessException;
+import com.marine.ecobook.auth.mapper.UserMapper;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,8 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,10 +30,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(EcoBookApplicationTests.ExceptionFixtureController.class)
+@ActiveProfiles("test")
 class EcoBookApplicationTests {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private UserMapper userMapper;
 
     @Test
     void healthEndpointReturnsUpStatus() throws Exception {
