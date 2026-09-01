@@ -9,6 +9,7 @@ import com.marine.ecobook.category.mapper.CategoryMapper;
 import com.marine.ecobook.category.model.Category;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -31,6 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("integration")
 class CategoryIntegrationTests {
 
     @Autowired
@@ -126,6 +129,20 @@ class CategoryIntegrationTests {
         mockMvc.perform(delete("/api/admin/categories/{id}", child.path("id").asLong()).header("satoken", token))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value(40901));
+    }
+
+    @Test
+    void emptySecondLevelCategoryCanBeDeleted() throws Exception {
+        String token = login(createUser(UserRole.ADMIN).getUsername());
+        String suffix = uniqueSuffix();
+        JsonNode root = createCategory(token, null, "空分类一级" + suffix);
+        JsonNode child = createCategory(token, root.path("id").asLong(), "空分类二级" + suffix);
+
+        mockMvc.perform(delete("/api/admin/categories/{id}", child.path("id").asLong()).header("satoken", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        assertNull(categoryMapper.selectById(child.path("id").asLong()));
     }
 
     @Test

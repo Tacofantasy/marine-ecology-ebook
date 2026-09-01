@@ -8,6 +8,7 @@ import com.marine.ecobook.common.exception.BusinessException;
 import com.marine.ecobook.ebook.dto.EbookItem;
 import com.marine.ecobook.ebook.dto.EbookUpsertRequest;
 import com.marine.ecobook.ebook.dto.PageData;
+import com.marine.ecobook.ebook.mapper.ChapterMapper;
 import com.marine.ecobook.ebook.mapper.EbookMapper;
 import com.marine.ecobook.ebook.model.Ebook;
 import java.time.LocalDateTime;
@@ -26,11 +27,17 @@ import org.springframework.web.multipart.MultipartFile;
 public class EbookService {
 
     private final EbookMapper ebookMapper;
+    private final ChapterMapper chapterMapper;
     private final CategoryMapper categoryMapper;
     private final CoverStorage coverStorage;
 
-    public EbookService(EbookMapper ebookMapper, CategoryMapper categoryMapper, CoverStorage coverStorage) {
+    public EbookService(
+            EbookMapper ebookMapper,
+            ChapterMapper chapterMapper,
+            CategoryMapper categoryMapper,
+            CoverStorage coverStorage) {
         this.ebookMapper = ebookMapper;
+        this.chapterMapper = chapterMapper;
         this.categoryMapper = categoryMapper;
         this.coverStorage = coverStorage;
     }
@@ -116,12 +123,16 @@ public class EbookService {
     public void delete(long ebookId) {
         Ebook ebook = requiredEbook(ebookId);
         assertDraft(ebook);
+        chapterMapper.deleteByEbookId(ebookId);
         ebookMapper.deleteById(ebookId);
         // 封面删除放到事务提交后执行，避免删除记录失败时文件已被删除。
         registerPostCommitCleanup(null, ebook.getCoverUrl());
     }
 
     private PageData<EbookItem> list(Long categoryId, String keyword, int page, int pageSize, boolean publicOnly) {
+        if (categoryId != null) {
+            requiredSecondLevelCategory(categoryId);
+        }
         LambdaQueryWrapper<Ebook> query = new LambdaQueryWrapper<>();
         if (publicOnly) {
             query.eq(Ebook::getStatus, "PUBLISHED");
@@ -146,13 +157,17 @@ public class EbookService {
     }
 
     private void assertPublishable(Ebook ebook) {
-        if (ebook.getSummary() == null || ebook.getSummary().length() < 20) {
+        if (normalizedOptional(ebook.getTitle()) == null) {
+            throw new BusinessException(ResultCode.CONFLICT, "发布前请填写电子书名称");
+        }
+        String summary = normalizedOptional(ebook.getSummary());
+        if (summary == null || summary.length() < 20 || summary.length() > 500) {
             throw new BusinessException(ResultCode.CONFLICT, "发布前请填写 20–500 字简介");
         }
-        if (ebook.getCoverUrl() == null) {
+        if (normalizedOptional(ebook.getCoverUrl()) == null) {
             throw new BusinessException(ResultCode.CONFLICT, "发布前请上传封面图片");
         }
-        if (ebook.getSourceNote() == null) {
+        if (normalizedOptional(ebook.getSourceNote()) == null) {
             throw new BusinessException(ResultCode.CONFLICT, "发布前请填写内容来源说明");
         }
         requiredSecondLevelCategory(ebook.getCategoryId());

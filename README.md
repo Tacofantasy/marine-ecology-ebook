@@ -48,11 +48,14 @@ Flyway 会在后端首次启动时创建数据库表和演示数据。本地默�
 cd backend
 ..\scripts\with-jdk17.cmd mvn test
 
+# 完整集成测试：先启动 MySQL 与 Redis，再执行此命令
+..\scripts\with-jdk17.cmd mvn test -Pintegration
+
 cd ..\frontend
 npm run build
 ```
 
-`scripts/use-jdk17.ps1` 可显示项目私有 JDK 的版本；`scripts/with-jdk17.cmd <命令>` 会仅为该命令设置 JDK 17，不会修改系统 `JAVA_HOME` 或其他项目的 Java 版本。
+`mvn test` 运行不依赖外部服务的单元测试；带 `@Tag("integration")` 的认证、分类和电子书流程测试需要 MySQL 与 Redis，使用 `mvn test -Pintegration` 执行。`scripts/use-jdk17.ps1` 可显示项目私有 JDK 的版本；`scripts/with-jdk17.cmd <命令>` 会仅为该命令设置 JDK 17，不会修改系统 `JAVA_HOME` 或其他项目的 Java 版本。
 
 ## 当前范围
 

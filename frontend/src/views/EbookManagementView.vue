@@ -217,7 +217,7 @@ onMounted(async () => {
               <a-popconfirm :title="record.status === 'DRAFT' ? '发布前会校验简介、封面、来源和章节，确定继续吗？' : '确定撤回该电子书吗？'" ok-text="确定" cancel-text="取消" @confirm="changeStatus(record)">
                 <a-button type="link">{{ record.status === 'DRAFT' ? '发布' : '撤回' }}</a-button>
               </a-popconfirm>
-              <a-popconfirm v-if="record.status === 'DRAFT'" title="确定永久删除该草稿及其封面吗？" ok-text="删除" cancel-text="取消" @confirm="remove(record)">
+              <a-popconfirm v-if="record.status === 'DRAFT'" title="将永久删除该草稿、其章节和封面，且无法恢复。确定继续吗？" ok-text="删除" cancel-text="取消" @confirm="remove(record)">
                 <a-button danger type="link">删除</a-button>
               </a-popconfirm>
             </a-space>

@@ -13,10 +13,12 @@ import java.util.Base64;
 import java.util.UUID;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,6 +26,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -32,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("integration")
 class EbookIntegrationTests {
 
     @Autowired
@@ -48,6 +52,9 @@ class EbookIntegrationTests {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void regularUserCannotManageEbooks() throws Exception {
@@ -85,6 +92,11 @@ class EbookIntegrationTests {
         mockMvc.perform(post("/api/admin/ebooks").header("satoken", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload(root.getId(), "不应创建" + suffix(), null, null)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("电子书必须归属二级分类"));
+
+        mockMvc.perform(get("/api/admin/ebooks").header("satoken", token)
+                        .param("categoryId", String.valueOf(root.getId())))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("电子书必须归属二级分类"));
 
@@ -156,6 +168,24 @@ class EbookIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.startsWith("/uploads/covers/")));
+    }
+
+    @Test
+    void deletingDraftAlsoDeletesItsChapters() throws Exception {
+        String token = login(createUser(UserRole.ADMIN).getUsername());
+        long ebookId = createDraft(token, secondLevelCategory().getId(), "章节删除测试" + suffix());
+        jdbcTemplate.update("""
+                INSERT INTO chapters (ebook_id, title, content, sort_order, status, source_note)
+                VALUES (?, '测试章节', '<p>测试正文</p>', 999, 'DRAFT', '测试来源')
+                """, ebookId);
+
+        mockMvc.perform(delete("/api/admin/ebooks/{id}", ebookId).header("satoken", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        Integer chapterCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM chapters WHERE ebook_id = ?", Integer.class, ebookId);
+        org.junit.jupiter.api.Assertions.assertEquals(0, chapterCount);
     }
 
     private long createDraft(String token, long categoryId, String title) throws Exception {

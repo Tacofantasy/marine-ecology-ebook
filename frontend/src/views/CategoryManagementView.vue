@@ -12,6 +12,7 @@ import {
 const categories = ref<CategoryTreeItem[]>([])
 const loading = ref(false)
 const submitting = ref(false)
+const removingCategoryId = ref<number | null>(null)
 const modalOpen = ref(false)
 const editingCategory = ref<CategoryTreeItem | null>(null)
 const parentId = ref<number | null>(null)
@@ -75,12 +76,18 @@ async function submit() {
 }
 
 async function remove(category: CategoryTreeItem) {
+  if (removingCategoryId.value !== null) {
+    return
+  }
+  removingCategoryId.value = category.id
   try {
     await deleteCategory(category.id)
     message.success('分类已删除')
     await loadCategories()
   } catch (error) {
     message.error(error instanceof Error ? error.message : '删除失败，请稍后重试。')
+  } finally {
+    removingCategoryId.value = null
   }
 }
 
@@ -119,12 +126,14 @@ onMounted(loadCategories)
               <a-button v-if="record.parentId === null" type="link" @click="openCreate(record.id)">新增二级</a-button>
               <a-button type="link" @click="openEdit(record)">编辑</a-button>
               <a-popconfirm
-                title="确定删除该分类吗？"
+                :title="record.parentId === null
+                  ? '仅当一级分类不含二级分类时才可删除，确定继续吗？'
+                  : '仅当二级分类没有电子书时才可删除，确定继续吗？'"
                 ok-text="删除"
                 cancel-text="取消"
                 @confirm="remove(record)"
               >
-                <a-button danger type="link">删除</a-button>
+                <a-button :loading="removingCategoryId === record.id" danger type="link">删除</a-button>
               </a-popconfirm>
             </a-space>
           </template>
