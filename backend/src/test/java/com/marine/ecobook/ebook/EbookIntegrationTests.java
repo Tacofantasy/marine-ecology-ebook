@@ -1,13 +1,16 @@
 package com.marine.ecobook.ebook;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.marine.ecobook.auth.mapper.UserMapper;
 import com.marine.ecobook.auth.model.User;
 import com.marine.ecobook.auth.model.UserRole;
 import com.marine.ecobook.category.mapper.CategoryMapper;
 import com.marine.ecobook.category.model.Category;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.UUID;
+import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -91,18 +94,50 @@ class EbookIntegrationTests {
     }
 
     @Test
-    void coverEndpointRejectsInvalidContentAndAcceptsPngSignature() throws Exception {
+    void coverEndpointRejectsInvalidContentAndAcceptsRealPng() throws Exception {
         String token = login(createUser(UserRole.ADMIN).getUsername());
         long ebookId = createDraft(token, secondLevelCategory().getId(), "封面测试书" + suffix());
 
-        MockMultipartFile invalid = new MockMultipartFile("file", "not-image.png", "image/png", "not an image".getBytes());
-        mockMvc.perform(multipart("/api/admin/ebooks/cover").file(invalid).param("ebookId", String.valueOf(ebookId)).header("satoken", token))
+        // 伪造的 PNG 魔数但内容不可解码，应被拒绝
+        MockMultipartFile fake = new MockMultipartFile("file", "not-image.png", "image/png", "not an image".getBytes());
+        mockMvc.perform(multipart("/api/admin/ebooks/cover").file(fake).param("ebookId", String.valueOf(ebookId)).header("satoken", token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("封面仅支持 JPEG、PNG 或 WebP 图片"));
 
-        byte[] png = new byte[] {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n', 0};
+        // 真实的最小合法 PNG（1x1 像素），应被接受
+        byte[] png = createMinimalPng();
         MockMultipartFile valid = new MockMultipartFile("file", "cover.png", "image/png", png);
         mockMvc.perform(multipart("/api/admin/ebooks/cover").file(valid).param("ebookId", String.valueOf(ebookId)).header("satoken", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.startsWith("/uploads/covers/")));
+    }
+
+    @Test
+    void seededIncompleteEbookIsRevertedToDraftByV7Migration() throws Exception {
+        // V1 插入的演示电子书缺少封面且简介不足 20 字，V7 迁移将其降为 DRAFT。
+        // 公开列表不应返回该演示电子书。
+        mockMvc.perform(get("/api/ebooks").param("keyword", "认识海洋生态系统"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
+    void coverReplacementDoesNotLeaveOrphanedFileOnDbFailure() throws Exception {
+        String token = login(createUser(UserRole.ADMIN).getUsername());
+        long ebookId = createDraft(token, secondLevelCategory().getId(), "封面替换测试" + suffix());
+
+        // 第一次上传封面
+        byte[] png1 = createMinimalPng();
+        MockMultipartFile cover1 = new MockMultipartFile("file", "cover1.png", "image/png", png1);
+        mockMvc.perform(multipart("/api/admin/ebooks/cover").file(cover1).param("ebookId", String.valueOf(ebookId)).header("satoken", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        // 第二次替换封面——应成功且旧封面被静默清理
+        byte[] png2 = createMinimalPng();
+        MockMultipartFile cover2 = new MockMultipartFile("file", "cover2.png", "image/png", png2);
+        mockMvc.perform(multipart("/api/admin/ebooks/cover").file(cover2).param("ebookId", String.valueOf(ebookId)).header("satoken", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.startsWith("/uploads/covers/")));
@@ -155,5 +190,17 @@ class EbookIntegrationTests {
 
     private String suffix() {
         return UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+    }
+
+    /**
+     * 生成一个真实的最小合法 PNG 图片（1x1 像素，ARGB），
+     * 确保通过 ImageIO 完整解码验证。
+     */
+    private byte[] createMinimalPng() throws IOException {
+        BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+        image.setRGB(0, 0, 0xFF0000FF);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", baos);
+        return baos.toByteArray();
     }
 }

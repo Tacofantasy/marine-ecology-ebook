@@ -17,6 +17,8 @@ import java.util.Map;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -83,16 +85,10 @@ public class EbookService {
         assertDraft(ebook);
         String newCoverUrl = coverStorage.save(file);
         String oldCoverUrl = ebook.getCoverUrl();
-        try {
-            ebook.setCoverUrl(newCoverUrl);
-            ebookMapper.updateById(ebook);
-        } catch (RuntimeException exception) {
-            coverStorage.delete(newCoverUrl);
-            throw exception;
-        }
-        if (oldCoverUrl != null) {
-            coverStorage.delete(oldCoverUrl);
-        }
+        ebook.setCoverUrl(newCoverUrl);
+        ebookMapper.updateById(ebook);
+        // 旧封面删除放到事务提交后执行：若事务回滚，新文件也会被补偿删除，避免无主文件遗留。
+        registerPostCommitCleanup(newCoverUrl, oldCoverUrl);
         return newCoverUrl;
     }
 
@@ -122,7 +118,8 @@ public class EbookService {
         Ebook ebook = requiredEbook(ebookId);
         assertDraft(ebook);
         ebookMapper.deleteById(ebookId);
-        coverStorage.delete(ebook.getCoverUrl());
+        // 封面删除放到事务提交后执行，避免删除记录失败时文件已被删除。
+        registerPostCommitCleanup(null, ebook.getCoverUrl());
     }
 
     private PageData<EbookItem> list(Long categoryId, String keyword, int page, int pageSize, boolean publicOnly) {
@@ -219,5 +216,39 @@ public class EbookService {
         }
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    /**
+     * 注册事务提交后的封面文件清理回调。
+     * <p>
+     * 事务提交成功：删除旧封面文件（oldCoverUrl）。
+     * 事务回滚：补偿删除新封面文件（newCoverUrl），避免无主文件遗留磁盘。
+     * 若未处于事务上下文（如非事务调用），立即执行清理。
+     *
+     * @param newCoverUrl 新保存的封面 URL，事务回滚时补偿删除；null 表示无新文件
+     * @param oldCoverUrl 旧封面 URL，事务提交后删除；null 表示无旧文件
+     */
+    private void registerPostCommitCleanup(String newCoverUrl, String oldCoverUrl) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    if (oldCoverUrl != null) {
+                        coverStorage.deleteQuietly(oldCoverUrl);
+                    }
+                }
+
+                @Override
+                public void afterCompletion(int status) {
+                    if (status == STATUS_ROLLED_BACK && newCoverUrl != null) {
+                        coverStorage.deleteQuietly(newCoverUrl);
+                    }
+                }
+            });
+        } else {
+            if (oldCoverUrl != null) {
+                coverStorage.deleteQuietly(oldCoverUrl);
+            }
+        }
     }
 }
