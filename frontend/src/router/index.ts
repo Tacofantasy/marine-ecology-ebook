@@ -8,6 +8,7 @@ import RegisterView from '../views/RegisterView.vue'
 declare module 'vue-router' {
   interface RouteMeta {
     requiresAuth?: boolean
+    requiresContentAdmin?: boolean
     guestOnly?: boolean
   }
 }
@@ -19,6 +20,12 @@ const router = createRouter({
     { path: '/login', name: 'login', component: LoginView, meta: { guestOnly: true } },
     { path: '/register', name: 'register', component: RegisterView, meta: { guestOnly: true } },
     { path: '/profile', name: 'profile', component: ProfileView, meta: { requiresAuth: true } },
+    {
+      path: '/admin/categories',
+      name: 'category-management',
+      component: () => import('../views/CategoryManagementView.vue'),
+      meta: { requiresAuth: true, requiresContentAdmin: true },
+    },
   ],
 })
 
@@ -27,6 +34,9 @@ router.beforeEach((to) => {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
   if (to.meta.guestOnly && authState.token) {
+    return { name: 'home' }
+  }
+  if (to.meta.requiresContentAdmin && !['ADMIN', 'SUPER_ADMIN'].includes(authState.user?.role ?? 'USER')) {
     return { name: 'home' }
   }
   return true

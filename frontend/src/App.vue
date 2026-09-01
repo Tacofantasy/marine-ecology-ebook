@@ -30,11 +30,14 @@ async function logout() {
     </RouterLink>
     <nav class="site-nav" aria-label="主导航">
       <RouterLink to="/">首页</RouterLink>
-      <RouterLink v-if="authState.user" to="/profile">个人资料</RouterLink>
+      <template v-if="authState.user">
+        <RouterLink to="/profile">个人资料</RouterLink>
+        <RouterLink v-if="['ADMIN', 'SUPER_ADMIN'].includes(authState.user.role)" to="/admin/categories">分类管理</RouterLink>
+        <a-popconfirm title="确定要退出登录吗？" ok-text="退出" cancel-text="取消" @confirm="logout">
+          <a-button class="nav-button" type="link">退出登录</a-button>
+        </a-popconfirm>
+      </template>
       <RouterLink v-else to="/login">登录</RouterLink>
-      <a-popconfirm v-if="authState.user" title="确定要退出登录吗？" ok-text="退出" cancel-text="取消" @confirm="logout">
-        <a-button class="nav-button" type="link">退出登录</a-button>
-      </a-popconfirm>
     </nav>
   </a-layout-header>
 
