@@ -17,7 +17,7 @@
 # 首次执行：复制环境模板并设置本机开发密码
 Copy-Item .env.example .env
 
-# 启动 MySQL 8 与 Redis（可用 docker compose ps 查看状态）
+# 启动 MySQL 8 与 Redis（Docker Desktop 会将两者归入 marine-ebook 项目组）
 docker compose up -d mysql redis
 
 # 终端一：后端（仅此命令进程使用项目私有 JDK 17）
