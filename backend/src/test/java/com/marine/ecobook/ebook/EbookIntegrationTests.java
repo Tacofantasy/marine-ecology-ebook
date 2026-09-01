@@ -9,6 +9,7 @@ import com.marine.ecobook.category.model.Category;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.UUID;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
@@ -94,23 +95,37 @@ class EbookIntegrationTests {
     }
 
     @Test
-    void coverEndpointRejectsInvalidContentAndAcceptsRealPng() throws Exception {
+    void coverEndpointValidatesRealImageContentForAllSupportedFormats() throws Exception {
         String token = login(createUser(UserRole.ADMIN).getUsername());
         long ebookId = createDraft(token, secondLevelCategory().getId(), "封面测试书" + suffix());
 
-        // 伪造的 PNG 魔数但内容不可解码，应被拒绝
-        MockMultipartFile fake = new MockMultipartFile("file", "not-image.png", "image/png", "not an image".getBytes());
-        mockMvc.perform(multipart("/api/admin/ebooks/cover").file(fake).param("ebookId", String.valueOf(ebookId)).header("satoken", token))
+        byte[] fakePng = new byte[] {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n', 'b', 'r', 'o', 'k', 'e', 'n'};
+        MockMultipartFile malformedPng = new MockMultipartFile("file", "fake.png", "image/png", fakePng);
+        mockMvc.perform(multipart("/api/admin/ebooks/cover").file(malformedPng).param("ebookId", String.valueOf(ebookId)).header("satoken", token))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("封面仅支持 JPEG、PNG 或 WebP 图片"));
+                .andExpect(jsonPath("$.message").value("封面图片内容无效或已损坏"));
 
-        // 真实的最小合法 PNG（1x1 像素），应被接受
-        byte[] png = createMinimalPng();
-        MockMultipartFile valid = new MockMultipartFile("file", "cover.png", "image/png", png);
-        mockMvc.perform(multipart("/api/admin/ebooks/cover").file(valid).param("ebookId", String.valueOf(ebookId)).header("satoken", token))
+        byte[] fakeWebp = new byte[] {'R', 'I', 'F', 'F', 12, 0, 0, 0, 'W', 'E', 'B', 'P', 'J', 'U', 'N', 'K', 0, 0, 0, 0};
+        MockMultipartFile malformedWebp = new MockMultipartFile("file", "fake.webp", "image/webp", fakeWebp);
+        mockMvc.perform(multipart("/api/admin/ebooks/cover").file(malformedWebp).param("ebookId", String.valueOf(ebookId)).header("satoken", token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("封面图片内容无效或已损坏"));
+
+        MockMultipartFile validJpeg = new MockMultipartFile("file", "cover.jpg", "image/jpeg", createMinimalJpeg());
+        mockMvc.perform(multipart("/api/admin/ebooks/cover").file(validJpeg).param("ebookId", String.valueOf(ebookId)).header("satoken", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.startsWith("/uploads/covers/")));
+
+        MockMultipartFile validPng = new MockMultipartFile("file", "cover.png", "image/png", createMinimalPng());
+        mockMvc.perform(multipart("/api/admin/ebooks/cover").file(validPng).param("ebookId", String.valueOf(ebookId)).header("satoken", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        MockMultipartFile validWebp = new MockMultipartFile("file", "cover.webp", "image/webp", createMinimalWebp());
+        mockMvc.perform(multipart("/api/admin/ebooks/cover").file(validWebp).param("ebookId", String.valueOf(ebookId)).header("satoken", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
     }
 
     @Test
@@ -123,7 +138,7 @@ class EbookIntegrationTests {
     }
 
     @Test
-    void coverReplacementDoesNotLeaveOrphanedFileOnDbFailure() throws Exception {
+    void coverEndpointAllowsReplacement() throws Exception {
         String token = login(createUser(UserRole.ADMIN).getUsername());
         long ebookId = createDraft(token, secondLevelCategory().getId(), "封面替换测试" + suffix());
 
@@ -202,5 +217,17 @@ class EbookIntegrationTests {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ImageIO.write(image, "png", baos);
         return baos.toByteArray();
+    }
+
+    private byte[] createMinimalJpeg() throws IOException {
+        BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+        image.setRGB(0, 0, 0x0000FF);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpg", baos);
+        return baos.toByteArray();
+    }
+
+    private byte[] createMinimalWebp() {
+        return Base64.getDecoder().decode("UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA");
     }
 }

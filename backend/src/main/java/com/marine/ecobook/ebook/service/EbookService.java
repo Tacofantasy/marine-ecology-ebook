@@ -85,10 +85,9 @@ public class EbookService {
         assertDraft(ebook);
         String newCoverUrl = coverStorage.save(file);
         String oldCoverUrl = ebook.getCoverUrl();
+        registerPostCommitCleanup(newCoverUrl, oldCoverUrl);
         ebook.setCoverUrl(newCoverUrl);
         ebookMapper.updateById(ebook);
-        // 旧封面删除放到事务提交后执行：若事务回滚，新文件也会被补偿删除，避免无主文件遗留。
-        registerPostCommitCleanup(newCoverUrl, oldCoverUrl);
         return newCoverUrl;
     }
 
