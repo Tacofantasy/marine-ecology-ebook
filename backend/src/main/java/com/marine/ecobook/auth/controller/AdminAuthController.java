@@ -1,6 +1,6 @@
 package com.marine.ecobook.auth.controller;
 
-import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.marine.ecobook.auth.dto.UserProfile;
 import com.marine.ecobook.auth.service.AuthService;
 import com.marine.ecobook.common.api.ApiResponse;
@@ -18,9 +18,15 @@ public class AdminAuthController {
         this.authService = authService;
     }
 
-    @SaCheckRole("ADMIN")
+    @SaCheckLogin
     @GetMapping("/auth-check")
     public ApiResponse<UserProfile> authCheck() {
-        return ApiResponse.success(authService.currentUser());
+        return ApiResponse.success(authService.currentContentAdministrator());
+    }
+
+    @SaCheckLogin
+    @GetMapping("/super-admin/auth-check")
+    public ApiResponse<UserProfile> superAdminAuthCheck() {
+        return ApiResponse.success(authService.currentSuperAdministrator());
     }
 }

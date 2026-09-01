@@ -1,19 +1,29 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
 import { authState, clearSession } from './auth/session'
+import { logout as logoutRequest } from './auth/auth-api'
 
 const router = useRouter()
 
 async function logout() {
-  clearSession()
-  await router.push('/')
+  try {
+    await logoutRequest()
+    message.success('已退出登录')
+  } catch {
+    message.warning('会话已失效，已清除本地状态')
+  } finally {
+    clearSession()
+    await router.push('/')
+  }
 }
 </script>
 
 <template>
   <a class="skip-link" href="#main-content">跳到主要内容</a>
 
-  <header class="site-header">
+  <a-layout>
+  <a-layout-header class="site-header">
     <RouterLink class="brand" to="/" aria-label="海洋生态数字电子书首页">
       <span class="brand-mark" aria-hidden="true"></span>
       <span>海洋生态数字电子书</span>
@@ -22,9 +32,12 @@ async function logout() {
       <RouterLink to="/">首页</RouterLink>
       <RouterLink v-if="authState.user" to="/profile">个人资料</RouterLink>
       <RouterLink v-else to="/login">登录</RouterLink>
-      <button v-if="authState.user" class="nav-button" type="button" @click="logout">退出登录</button>
+      <a-popconfirm v-if="authState.user" title="确定要退出登录吗？" ok-text="退出" cancel-text="取消" @confirm="logout">
+        <a-button class="nav-button" type="link">退出登录</a-button>
+      </a-popconfirm>
     </nav>
-  </header>
+  </a-layout-header>
 
-  <div id="main-content"><RouterView /></div>
+  <a-layout-content id="main-content"><RouterView /></a-layout-content>
+  </a-layout>
 </template>

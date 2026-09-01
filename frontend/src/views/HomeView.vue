@@ -42,11 +42,11 @@ onMounted(checkHealth)
       <h1 id="hero-title">从一页知识，走进蔚蓝生态</h1>
       <p class="hero-copy">面向海洋科普内容的阅读与管理平台。首期将提供分类浏览、电子书阅读、互动收藏与内容管理。</p>
 
-      <div v-if="authState.user" class="welcome-card">
-        <p>你好，{{ authState.user.username }}</p>
-        <span>{{ authState.user.role === 'ADMIN' ? '管理员' : '注册用户' }}</span>
+      <a-card v-if="authState.user" class="welcome-card" :bordered="false">
+        <p>你好，{{ authState.user.displayName }}</p>
+        <span>{{ authState.user.role === 'SUPER_ADMIN' ? '总管理员' : authState.user.role === 'ADMIN' ? '子管理员' : '注册用户' }}</span>
         <RouterLink class="text-link" to="/profile">查看个人资料</RouterLink>
-      </div>
+      </a-card>
       <div v-else class="hero-actions">
         <RouterLink class="primary-button" to="/login">登录平台</RouterLink>
         <RouterLink class="secondary-button on-dark" to="/register">注册账号</RouterLink>
@@ -60,9 +60,7 @@ onMounted(checkHealth)
             {{ statusText }}
           </p>
         </div>
-        <button class="secondary-button" type="button" :disabled="loading" @click="checkHealth">
-          {{ loading ? '检查中…' : '重新检查' }}
-        </button>
+        <a-button :loading="loading" @click="checkHealth">重新检查</a-button>
       </div>
     </section>
 

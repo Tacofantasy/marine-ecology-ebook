@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ApiError } from '../api/client'
 import { register } from '../auth/auth-api'
 
 const router = useRouter()
-const username = ref('')
-const email = ref('')
-const password = ref('')
+const form = reactive({ username: '', email: '', password: '' })
 const errorMessage = ref('')
 const successMessage = ref('')
 const submitting = ref(false)
@@ -17,7 +15,7 @@ async function submit() {
   successMessage.value = ''
   submitting.value = true
   try {
-    await register({ username: username.value.trim(), email: email.value.trim(), password: password.value })
+    await register({ username: form.username.trim(), email: form.email.trim(), password: form.password })
     successMessage.value = '注册成功，正在跳转登录页面…'
     window.setTimeout(() => router.replace('/login'), 700)
   } catch (error) {
@@ -29,34 +27,29 @@ async function submit() {
 
 <template>
   <main class="auth-shell">
-    <section class="auth-card" aria-labelledby="register-title">
+    <a-card class="auth-card" :bordered="false" aria-labelledby="register-title">
       <p class="section-kicker">JOIN THE PLATFORM</p>
       <h1 id="register-title">创建账号</h1>
       <p class="auth-intro">注册后可参与后续的点赞与收藏功能。</p>
 
-      <form class="auth-form" @submit.prevent="submit">
-        <div class="form-field">
-          <label for="username">用户名</label>
-          <input id="username" v-model="username" name="username" autocomplete="username" required pattern="[A-Za-z0-9_]{3,64}" minlength="3" maxlength="64" aria-describedby="username-hint" />
+      <a-form class="auth-form" :model="form" layout="vertical" @finish="submit">
+        <a-form-item label="用户名" name="username" :rules="[{ required: true, pattern: /^[A-Za-z0-9_]{3,64}$/, message: '请输入 3 至 64 位字母、数字或下划线' }]">
+          <a-input v-model:value="form.username" autocomplete="username" maxlength="64" />
           <small id="username-hint">3 至 64 位字母、数字或下划线；`admin` 为保留名称。</small>
-        </div>
-        <div class="form-field">
-          <label for="email">邮箱</label>
-          <input id="email" v-model="email" name="email" type="email" autocomplete="email" required maxlength="255" />
-        </div>
-        <div class="form-field">
-          <label for="register-password">密码</label>
-          <input id="register-password" v-model="password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="64" />
+        </a-form-item>
+        <a-form-item label="邮箱（选填）" name="email" :rules="[{ type: 'email', message: '邮箱格式不正确' }]">
+          <a-input v-model:value="form.email" autocomplete="email" maxlength="255" />
+        </a-form-item>
+        <a-form-item label="密码" name="password" :rules="[{ required: true, min: 8, message: '密码至少 8 位' }]">
+          <a-input-password v-model:value="form.password" autocomplete="new-password" maxlength="64" />
           <small>密码长度为 8 至 64 位。</small>
-        </div>
-        <p v-if="errorMessage" class="form-error" role="alert">{{ errorMessage }}</p>
-        <p v-if="successMessage" class="form-success" role="status">{{ successMessage }}</p>
-        <button class="primary-button form-button" type="submit" :disabled="submitting">
-          {{ submitting ? '注册中…' : '创建账号' }}
-        </button>
-      </form>
+        </a-form-item>
+        <a-alert v-if="errorMessage" class="form-alert" type="error" :message="errorMessage" show-icon />
+        <a-alert v-if="successMessage" class="form-alert" type="success" :message="successMessage" show-icon />
+        <a-button class="form-button" type="primary" html-type="submit" block :loading="submitting">创建账号</a-button>
+      </a-form>
 
       <p class="auth-switch">已有账号？<RouterLink to="/login">返回登录</RouterLink></p>
-    </section>
+    </a-card>
   </main>
 </template>

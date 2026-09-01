@@ -29,17 +29,18 @@ onMounted(async () => {
 
 <template>
   <main class="auth-shell">
-    <section class="auth-card profile-card" aria-labelledby="profile-title">
+    <a-card class="auth-card profile-card" :bordered="false" aria-labelledby="profile-title">
       <p class="section-kicker">ACCOUNT PROFILE</p>
       <h1 id="profile-title">个人资料</h1>
-      <p v-if="loading" role="status">正在验证登录状态…</p>
-      <p v-else-if="errorMessage" class="form-error" role="alert">{{ errorMessage }}</p>
+      <a-spin v-if="loading" tip="正在验证登录状态…" />
+      <a-alert v-else-if="errorMessage" type="error" :message="errorMessage" show-icon />
       <dl v-else-if="user" class="profile-list">
         <div><dt>用户名</dt><dd>{{ user.username }}</dd></div>
+        <div><dt>昵称</dt><dd>{{ user.displayName }}</dd></div>
         <div><dt>邮箱</dt><dd>{{ user.email || '未设置' }}</dd></div>
-        <div><dt>角色</dt><dd>{{ user.role === 'ADMIN' ? '管理员' : '注册用户' }}</dd></div>
+        <div><dt>角色</dt><dd>{{ user.role === 'SUPER_ADMIN' ? '总管理员' : user.role === 'ADMIN' ? '子管理员' : '注册用户' }}</dd></div>
       </dl>
-      <RouterLink class="secondary-button profile-back" to="/">返回首页</RouterLink>
-    </section>
+      <RouterLink custom to="/" v-slot="{ navigate }"><a-button class="profile-back" @click="navigate">返回首页</a-button></RouterLink>
+    </a-card>
   </main>
 </template>

@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.marine.ecobook.auth.mapper.UserMapper;
 import com.marine.ecobook.auth.model.User;
 import com.marine.ecobook.auth.model.UserRole;
+import cn.dev33.satoken.stp.StpUtil;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,9 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = {
-        "sa-token.jwt-secret-key=test-only-jwt-secret-key-with-at-least-32-characters"
-})
+@SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
 class AuthIntegrationTests {
@@ -54,6 +54,7 @@ class AuthIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.username").value(username))
+                .andExpect(jsonPath("$.data.displayName").value(username))
                 .andExpect(jsonPath("$.data.role").value("USER"))
                 .andExpect(jsonPath("$.data.passwordHash").doesNotExist());
 
@@ -110,9 +111,51 @@ class AuthIntegrationTests {
     }
 
     @Test
-    void administratorEndpointRejectsUserAndAcceptsAdministrator() throws Exception {
+    void loginCreatesTwentyFourHourSessionAndLogoutInvalidatesIt() throws Exception {
+        User user = createUser(UserRole.USER, 1);
+        String token = login(user.getUsername(), "password123");
+
+        org.junit.jupiter.api.Assertions.assertTrue(StpUtil.getTokenTimeout(token) > 86300);
+        org.junit.jupiter.api.Assertions.assertTrue(StpUtil.getTokenTimeout(token) <= 86400);
+
+        mockMvc.perform(post("/api/auth/logout").header("satoken", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+        mockMvc.perform(get("/api/auth/me").header("satoken", token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(40101));
+    }
+
+    @Test
+    void disabledOrDeletedAccountLosesExistingSession() throws Exception {
+        User disabledUser = createUser(UserRole.USER, 1);
+        String disabledToken = login(disabledUser.getUsername(), "password123");
+        disabledUser.setStatus(0);
+        userMapper.updateById(disabledUser);
+
+        mockMvc.perform(get("/api/auth/me").header("satoken", disabledToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(40101));
+
+        User deletedUser = createUser(UserRole.USER, 1);
+        String deletedToken = login(deletedUser.getUsername(), "password123");
+        deletedUser.setDeletedAt(LocalDateTime.now());
+        userMapper.updateById(deletedUser);
+
+        mockMvc.perform(get("/api/auth/me").header("satoken", deletedToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(40101));
+
+        mockMvc.perform(loginRequest(deletedUser.getUsername(), "password123"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(40001));
+    }
+
+    @Test
+    void administratorEndpointsEnforceAdminHierarchy() throws Exception {
         User regularUser = createUser(UserRole.USER, 1);
         User administrator = createUser(UserRole.ADMIN, 1);
+        User superAdministrator = createUser(UserRole.SUPER_ADMIN, 1);
 
         mockMvc.perform(get("/api/admin/auth-check").header("satoken", login(regularUser.getUsername(), "password123")))
                 .andExpect(status().isForbidden())
@@ -123,6 +166,20 @@ class AuthIntegrationTests {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.id").value(administrator.getId()))
                 .andExpect(jsonPath("$.data.role").value("ADMIN"));
+
+        mockMvc.perform(get("/api/admin/auth-check").header("satoken", login(superAdministrator.getUsername(), "password123")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.role").value("SUPER_ADMIN"));
+
+        mockMvc.perform(get("/api/admin/super-admin/auth-check")
+                        .header("satoken", login(administrator.getUsername(), "password123")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(40301));
+
+        mockMvc.perform(get("/api/admin/super-admin/auth-check")
+                        .header("satoken", login(superAdministrator.getUsername(), "password123")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.role").value("SUPER_ADMIN"));
     }
 
     @Test
@@ -133,7 +190,7 @@ class AuthIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.username").value("admin"))
-                .andExpect(jsonPath("$.data.role").value("ADMIN"));
+                .andExpect(jsonPath("$.data.role").value("SUPER_ADMIN"));
     }
 
     private User createUser(UserRole role, int status) {

@@ -1,6 +1,11 @@
 package com.marine.ecobook.auth.model;
 
 public enum UserRole {
+    SUPER_ADMIN,
     ADMIN,
-    USER
+    USER;
+
+    public boolean isContentAdministrator() {
+        return this == ADMIN || this == SUPER_ADMIN;
+    }
 }

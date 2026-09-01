@@ -10,8 +10,10 @@ public class User {
     private String username;
     private String passwordHash;
     private String email;
+    private String displayName;
     private UserRole role;
     private Integer status;
+    private LocalDateTime deletedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -47,6 +49,14 @@ public class User {
         this.email = email;
     }
 
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
     public UserRole getRole() {
         return role;
     }
@@ -61,6 +71,14 @@ public class User {
 
     public void setStatus(Integer status) {
         this.status = status;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -1,10 +1,11 @@
 import { reactive } from 'vue'
 
-export type UserRole = 'ADMIN' | 'USER'
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'USER'
 
 export interface UserProfile {
   id: number
   username: string
+  displayName: string
   email: string | null
   role: UserRole
   status: number
@@ -19,18 +20,18 @@ const storageKey = 'marine-ebook-auth'
 
 function readStoredSession(): StoredSession | null {
   try {
-    const raw = localStorage.getItem(storageKey)
+    const raw = sessionStorage.getItem(storageKey)
     if (!raw) {
       return null
     }
     const stored = JSON.parse(raw) as Partial<StoredSession>
     if (!stored.token || !stored.user) {
-      localStorage.removeItem(storageKey)
+      sessionStorage.removeItem(storageKey)
       return null
     }
     return stored as StoredSession
   } catch {
-    localStorage.removeItem(storageKey)
+    sessionStorage.removeItem(storageKey)
     return null
   }
 }
@@ -49,13 +50,13 @@ export function getToken() {
 export function setSession(token: string, user: UserProfile) {
   authState.token = token
   authState.user = user
-  localStorage.setItem(storageKey, JSON.stringify({ token, user }))
+  sessionStorage.setItem(storageKey, JSON.stringify({ token, user }))
 }
 
 export function clearSession() {
   authState.token = null
   authState.user = null
-  localStorage.removeItem(storageKey)
+  sessionStorage.removeItem(storageKey)
 }
 
 export function refreshUser(user: UserProfile) {
@@ -63,5 +64,5 @@ export function refreshUser(user: UserProfile) {
     return
   }
   authState.user = user
-  localStorage.setItem(storageKey, JSON.stringify({ token: authState.token, user }))
+  sessionStorage.setItem(storageKey, JSON.stringify({ token: authState.token, user }))
 }

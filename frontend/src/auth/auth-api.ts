@@ -23,3 +23,7 @@ export function login(payload: { account: string; password: string }) {
 export function getCurrentUser() {
   return apiRequest<UserProfile>('/api/auth/me', {}, true)
 }
+
+export function logout() {
+  return apiRequest<void>('/api/auth/logout', { method: 'POST' }, true)
+}

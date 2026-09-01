@@ -1,0 +1,5 @@
+app:
+  bootstrap:
+    initial-super-admin:
+      username: ${INITIAL_SUPER_ADMIN_USERNAME}
+      password: ${INITIAL_SUPER_ADMIN_PASSWORD}
