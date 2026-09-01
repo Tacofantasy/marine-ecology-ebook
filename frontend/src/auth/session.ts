@@ -3,7 +3,7 @@ import { reactive } from 'vue'
 export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'USER'
 
 export interface UserProfile {
-  id: number
+  id: string
   username: string
   displayName: string
   email: string | null

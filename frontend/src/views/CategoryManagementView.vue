@@ -12,10 +12,10 @@ import {
 const categories = ref<CategoryTreeItem[]>([])
 const loading = ref(false)
 const submitting = ref(false)
-const removingCategoryId = ref<number | null>(null)
+const removingCategoryId = ref<string | null>(null)
 const modalOpen = ref(false)
 const editingCategory = ref<CategoryTreeItem | null>(null)
-const parentId = ref<number | null>(null)
+const parentId = ref<string | null>(null)
 const form = reactive({ name: '' })
 
 const modalTitle = computed(() => {
@@ -36,7 +36,7 @@ async function loadCategories() {
   }
 }
 
-function openCreate(newParentId: number | null) {
+function openCreate(newParentId: string | null) {
   editingCategory.value = null
   parentId.value = newParentId
   form.name = ''

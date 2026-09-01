@@ -108,7 +108,7 @@ class AuthIntegrationTests {
         mockMvc.perform(get("/api/auth/me").header("satoken", token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.id").value(user.getId()))
+                .andExpect(jsonPath("$.data.id").value(String.valueOf(user.getId())))
                 .andExpect(jsonPath("$.data.role").value("USER"));
     }
 
@@ -166,7 +166,7 @@ class AuthIntegrationTests {
         mockMvc.perform(get("/api/admin/auth-check").header("satoken", login(administrator.getUsername(), "password123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.id").value(administrator.getId()))
+                .andExpect(jsonPath("$.data.id").value(String.valueOf(administrator.getId())))
                 .andExpect(jsonPath("$.data.role").value("ADMIN"));
 
         mockMvc.perform(get("/api/admin/auth-check").header("satoken", login(superAdministrator.getUsername(), "password123")))

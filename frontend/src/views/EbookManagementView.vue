@@ -22,8 +22,8 @@ const modalOpen = ref(false)
 const editingEbook = ref<EbookItem | null>(null)
 const selectedCover = ref<File | null>(null)
 const coverPreviewUrl = ref('')
-const filters = reactive({ categoryId: undefined as number | undefined, keyword: '', page: 1, pageSize: 10 })
-const form = reactive({ categoryId: undefined as number | undefined, title: '', summary: '', sourceNote: '' })
+const filters = reactive({ categoryId: undefined as string | undefined, keyword: '', page: 1, pageSize: 10 })
+const form = reactive({ categoryId: undefined as string | undefined, title: '', summary: '', sourceNote: '' })
 
 const secondaryCategories = computed(() => categories.value.flatMap((root) => root.children))
 const categoryOptions = computed(() => secondaryCategories.value.map((category) => ({

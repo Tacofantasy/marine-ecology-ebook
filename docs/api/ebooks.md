@@ -2,6 +2,8 @@
 
 所有接口返回 `{ code, message, data, timestamp }`；成功业务码为 `0`。列表 `data` 为 `{ total, list }`，默认每页 10 条，`pageSize` 最大 50。
 
+电子书与分类 ID 以十进制字符串返回和传递，避免浏览器处理 64 位整数时丢失精度。
+
 ## 公开查询
 
 `GET /api/ebooks?categoryId=&keyword=&page=1&pageSize=10`

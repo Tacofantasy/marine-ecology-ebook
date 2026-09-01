@@ -172,6 +172,7 @@ class CategoryIntegrationTests {
                         .content(payload))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.id").isString())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
     }

@@ -75,7 +75,7 @@ class EbookIntegrationTests {
                         .param("keyword", title))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.total").value(1))
-                .andExpect(jsonPath("$.data.list[0].id").value(ebookId))
+                .andExpect(jsonPath("$.data.list[0].id").value(String.valueOf(ebookId)))
                 .andExpect(jsonPath("$.data.list[0].status").value("DRAFT"));
 
         mockMvc.perform(get("/api/ebooks").param("keyword", title))
@@ -193,6 +193,7 @@ class EbookIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload(categoryId, title, null, null)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").isString())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("id").asLong();
     }

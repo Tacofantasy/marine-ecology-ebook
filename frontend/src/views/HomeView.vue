@@ -21,7 +21,7 @@ const statusText = ref('正在检查后端服务…')
 const categoryLoading = ref(true)
 const categoryError = ref('')
 const categories = ref<CategoryTreeItem[]>([])
-const selectedCategoryId = ref<number | null>(null)
+const selectedCategoryId = ref<string | null>(null)
 const ebooks = ref<EbookItem[]>([])
 const ebookLoading = ref(true)
 const ebookError = ref('')
@@ -57,7 +57,7 @@ async function loadCategories() {
   }
 }
 
-function selectCategory(categoryId: number) {
+function selectCategory(categoryId: string) {
   selectedCategoryId.value = selectedCategoryId.value === categoryId ? null : categoryId
   ebookPage.value = 1
   void loadEbooks()

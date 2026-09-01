@@ -3,8 +3,8 @@ import { apiRequest } from '../api/client'
 export type EbookStatus = 'DRAFT' | 'PUBLISHED'
 
 export interface EbookItem {
-  id: number
-  categoryId: number
+  id: string
+  categoryId: string
   categoryName: string
   title: string
   coverUrl: string | null
@@ -21,14 +21,14 @@ export interface PageData<T> {
 }
 
 export interface EbookPayload {
-  categoryId: number
+  categoryId: string
   title: string
   summary?: string
   sourceNote?: string
 }
 
 interface EbookQuery {
-  categoryId?: number | null
+  categoryId?: string | null
   keyword?: string
   page?: number
   pageSize?: number
@@ -55,24 +55,24 @@ export function createEbook(payload: EbookPayload) {
   return apiRequest<EbookItem>('/api/admin/ebooks', { method: 'POST', body: JSON.stringify(payload) }, true)
 }
 
-export function updateEbook(ebookId: number, payload: EbookPayload) {
+export function updateEbook(ebookId: string, payload: EbookPayload) {
   return apiRequest<EbookItem>(`/api/admin/ebooks/${ebookId}`, { method: 'PUT', body: JSON.stringify(payload) }, true)
 }
 
-export function uploadEbookCover(ebookId: number, file: File) {
+export function uploadEbookCover(ebookId: string, file: File) {
   const body = new FormData()
   body.append('file', file)
   return apiRequest<string>(`/api/admin/ebooks/cover?ebookId=${ebookId}`, { method: 'POST', body }, true)
 }
 
-export function publishEbook(ebookId: number) {
+export function publishEbook(ebookId: string) {
   return apiRequest<EbookItem>(`/api/admin/ebooks/${ebookId}/publish`, { method: 'POST' }, true)
 }
 
-export function unpublishEbook(ebookId: number) {
+export function unpublishEbook(ebookId: string) {
   return apiRequest<EbookItem>(`/api/admin/ebooks/${ebookId}/unpublish`, { method: 'POST' }, true)
 }
 
-export function deleteEbook(ebookId: number) {
+export function deleteEbook(ebookId: string) {
   return apiRequest<void>(`/api/admin/ebooks/${ebookId}`, { method: 'DELETE' }, true)
 }
