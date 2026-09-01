@@ -1,7 +1,8 @@
+name: marine-ebook
+
 services:
   mysql:
     image: mysql:8.0
-    container_name: marine-ebook-mysql
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -20,7 +21,6 @@ services:
 
   redis:
     image: redis:7.4-alpine
-    container_name: marine-ebook-redis
     restart: unless-stopped
     ports:
       - "${REDIS_PORT:-6379}:6379"
@@ -34,4 +34,6 @@ services:
 
 volumes:
   marine-ebook-mysql-data:
+    name: marine-ebook-mysql-data
   marine-ebook-redis-data:
+    name: marine-ebook-redis-data
