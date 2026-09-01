@@ -16,6 +16,10 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+  servlet:
+    multipart:
+      max-file-size: 6MB
+      max-request-size: 6MB
 
 mybatis-plus:
   configuration:
@@ -30,6 +34,10 @@ sa-token:
   is-log: false
 
 app:
+  ebook:
+    enabled: true
+  upload:
+    root: ${UPLOAD_ROOT:uploads}
   bootstrap:
     initial-super-admin:
       username: ${INITIAL_SUPER_ADMIN_USERNAME:admin}

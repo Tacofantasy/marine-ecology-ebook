@@ -33,6 +33,7 @@ async function logout() {
       <template v-if="authState.user">
         <RouterLink to="/profile">个人资料</RouterLink>
         <RouterLink v-if="['ADMIN', 'SUPER_ADMIN'].includes(authState.user.role)" to="/admin/categories">分类管理</RouterLink>
+        <RouterLink v-if="['ADMIN', 'SUPER_ADMIN'].includes(authState.user.role)" to="/admin/ebooks">电子书管理</RouterLink>
         <a-popconfirm title="确定要退出登录吗？" ok-text="退出" cancel-text="取消" @confirm="logout">
           <a-button class="nav-button" type="link">退出登录</a-button>
         </a-popconfirm>

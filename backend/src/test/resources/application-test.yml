@@ -8,3 +8,5 @@ spring:
 app:
   category:
     enabled: false
+  ebook:
+    enabled: false

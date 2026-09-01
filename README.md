@@ -36,7 +36,7 @@ MySQL 默认映射到本机 `3307`，避免与已有的 `3306` 服务冲突；�
 
 健康检查：`GET http://localhost:8080/api/health`
 
-认证接口说明见 [docs/api/authentication.md](docs/api/authentication.md)，分类接口说明见 [docs/api/categories.md](docs/api/categories.md)。Redis 配置和首次总管理员凭据均由本机 `.env` 提供，不能提交真实值到 Git。
+认证接口说明见 [docs/api/authentication.md](docs/api/authentication.md)，分类接口说明见 [docs/api/categories.md](docs/api/categories.md)，电子书接口说明见 [docs/api/ebooks.md](docs/api/ebooks.md)。Redis 配置和首次总管理员凭据均由本机 `.env` 提供，不能提交真实值到 Git。
 
 Flyway 会在后端首次启动时创建数据库表和演示数据。本地默认总管理员为 `admin` / `password`，仅用于开发；生产环境必须通过 `INITIAL_SUPER_ADMIN_USERNAME` 与 `INITIAL_SUPER_ADMIN_PASSWORD` 配置首次总管理员。
 
@@ -56,4 +56,4 @@ npm run build
 
 ## 当前范围
 
-本阶段只建设 Web 端。认证和两级分类管理已完成；电子书、章节、互动和统计将按已确认的实施计划逐项实现；嵌入式、TCP、语音和端侧大模型不在当前代码范围内。
+本阶段只建设 Web 端。认证、两级分类与电子书草稿/封面/公开查询已完成；章节、互动和统计将按已确认的实施计划逐项实现；嵌入式、TCP、语音和端侧大模型不在当前代码范围内。

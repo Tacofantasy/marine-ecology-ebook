@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { authState } from '../auth/session'
 import { getCategories, type CategoryTreeItem } from '../category/category-api'
+import { getPublicEbooks, type EbookItem } from '../ebook/ebook-api'
 
 interface HealthPayload {
   service: string
@@ -21,6 +22,13 @@ const categoryLoading = ref(true)
 const categoryError = ref('')
 const categories = ref<CategoryTreeItem[]>([])
 const selectedCategoryId = ref<number | null>(null)
+const ebooks = ref<EbookItem[]>([])
+const ebookLoading = ref(true)
+const ebookError = ref('')
+const ebookTotal = ref(0)
+const ebookPage = ref(1)
+const ebookPageSize = ref(10)
+const keyword = ref('')
 
 async function checkHealth() {
   loading.value = true
@@ -50,12 +58,49 @@ async function loadCategories() {
 }
 
 function selectCategory(categoryId: number) {
-  selectedCategoryId.value = categoryId
+  selectedCategoryId.value = selectedCategoryId.value === categoryId ? null : categoryId
+  ebookPage.value = 1
+  void loadEbooks()
+}
+
+async function loadEbooks() {
+  ebookLoading.value = true
+  ebookError.value = ''
+  try {
+    const data = await getPublicEbooks({
+      categoryId: selectedCategoryId.value,
+      keyword: keyword.value,
+      page: ebookPage.value,
+      pageSize: ebookPageSize.value,
+    })
+    ebooks.value = data.list
+    ebookTotal.value = data.total
+  } catch (error) {
+    ebookError.value = error instanceof Error ? error.message : '电子书加载失败，请稍后重试。'
+  } finally {
+    ebookLoading.value = false
+  }
+}
+
+function searchEbooks() {
+  ebookPage.value = 1
+  void loadEbooks()
+}
+
+function formatPublishedAt(value: string | null) {
+  return value ? new Date(value).toLocaleDateString('zh-CN') : ''
+}
+
+function changeEbookPage(page: number, pageSize: number) {
+  ebookPage.value = page
+  ebookPageSize.value = pageSize
+  void loadEbooks()
 }
 
 onMounted(() => {
   void checkHealth()
   void loadCategories()
+  void loadEbooks()
 })
 </script>
 
@@ -116,20 +161,45 @@ onMounted(() => {
           </section>
         </div>
       </a-spin>
-      <p v-if="selectedCategoryId !== null" class="category-selection" role="status">
-        已选择二级分类；电子书列表将在下一模块接入。
-      </p>
+    </section>
+
+    <section class="ebook-browser" aria-labelledby="ebook-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">数字阅读</p>
+          <h2 id="ebook-title">探索已发布电子书</h2>
+        </div>
+        <a-input-search v-model:value="keyword" class="ebook-search" allow-clear placeholder="搜索标题或简介" enter-button="搜索" @search="searchEbooks" />
+      </div>
+      <p v-if="selectedCategoryId !== null" class="category-selection" role="status">已按二级分类筛选；再次点击分类可取消筛选。</p>
+      <a-spin :spinning="ebookLoading">
+        <p v-if="ebookError" class="form-error" role="alert">{{ ebookError }}</p>
+        <p v-else-if="!ebookLoading && ebooks.length === 0" class="category-empty">暂无已发布电子书。请尝试更换分类或关键词。</p>
+        <div v-else class="ebook-grid">
+          <article v-for="ebook in ebooks" :key="ebook.id" class="ebook-card">
+            <img v-if="ebook.coverUrl" :src="ebook.coverUrl" :alt="`${ebook.title} 封面`" class="ebook-cover" loading="lazy" />
+            <div v-else class="ebook-cover ebook-cover-placeholder" aria-hidden="true">海洋科普</div>
+            <div class="ebook-card-body">
+              <p class="ebook-category">{{ ebook.categoryName }}</p>
+              <h3>{{ ebook.title }}</h3>
+              <p class="ebook-summary">{{ ebook.summary || '暂无简介' }}</p>
+              <time v-if="ebook.publishedAt" :datetime="ebook.publishedAt">发布于 {{ formatPublishedAt(ebook.publishedAt) }}</time>
+            </div>
+          </article>
+        </div>
+      </a-spin>
+      <a-pagination v-if="ebookTotal > 10" class="public-pagination" :current="ebookPage" :page-size="ebookPageSize" :total="ebookTotal" :page-size-options="['10', '20']" show-size-changer @change="changeEbookPage" />
     </section>
 
     <section class="next-steps" aria-labelledby="next-steps-title">
       <div>
         <p class="section-kicker">当前进度</p>
-        <h2 id="next-steps-title">认证联调已就绪</h2>
+        <h2 id="next-steps-title">内容管理持续完善中</h2>
       </div>
       <ol>
         <li>Vue 3 前端已连接 Spring Boot 健康检查接口</li>
         <li>可在浏览器完成注册、登录与身份验证</li>
-        <li>已接入两级分类公开查询与管理员分类管理</li>
+        <li>已接入两级分类、电子书草稿与公开电子书查询</li>
       </ol>
     </section>
   </main>
