@@ -12,6 +12,10 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   flyway:
     locations: classpath:db/migration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 mybatis-plus:
   configuration:
@@ -22,6 +26,11 @@ server:
 
 sa-token:
   token-name: satoken
-  timeout: 7200
+  timeout: 86400
   is-log: false
-  jwt-secret-key: ${SA_TOKEN_JWT_SECRET_KEY}
+
+app:
+  bootstrap:
+    initial-super-admin:
+      username: ${INITIAL_SUPER_ADMIN_USERNAME:admin}
+      password: ${INITIAL_SUPER_ADMIN_PASSWORD:password}

@@ -23,7 +23,8 @@ public class SaTokenPermissionConfig implements StpInterface {
     @Override
     public List<String> getRoleList(Object loginId, String loginType) {
         User user = userMapper.selectById(Long.parseLong(loginId.toString()));
-        if (user == null || user.getRole() == null) {
+        if (user == null || user.getRole() == null || !Integer.valueOf(1).equals(user.getStatus())
+                || user.getDeletedAt() != null) {
             return List.of();
         }
         return List.of(user.getRole().name());
