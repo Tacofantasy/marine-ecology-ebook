@@ -8,11 +8,13 @@
 
 `GET /api/ebooks?categoryId=&keyword=&page=1&pageSize=10`
 
-访客可调用，只返回已发布电子书。`categoryId` 必须是二级分类；`keyword` 仅匹配标题和简介。前台按发布时间倒序展示。
+访客可调用，只返回已发布电子书。`categoryId` 必须是二级分类；`keyword` 仅匹配标题和简介。前台按发布时间倒序展示。每条列表项包含公开点赞总数 `likeCount`（十进制字符串，无点赞时为 `"0"`）。`page` 超出实际页数时返回空 `list`，`total` 不变。
 
 `GET /api/ebooks/{id}`
 
-访客查看一本已发布电子书；草稿和不存在的电子书均返回 `40401`。
+访客查看一本已发布电子书；草稿和不存在的电子书均返回 `40401`。响应同样包含 `likeCount`。
+
+点赞、收藏与“我的收藏”等用户互动接口见[互动接口](interactions.md)。
 
 ## 管理端列表与草稿维护
 
@@ -20,11 +22,11 @@
 
 `GET /api/admin/ebooks?categoryId=&keyword=&page=1&pageSize=10`
 
-返回全部状态的电子书，按最近更新时间倒序。
+返回全部状态的电子书，按最近更新时间倒序。管理端列表与详情不包含 `likeCount` 字段，点赞聚合指标由后续统计模块提供。
 
 `GET /api/admin/ebooks/{id}`
 
-读取单本电子书（草稿和已发布均可），供章节管理页展示标题与当前状态。
+读取单本电子书（草稿和已发布均可），供章节管理页展示标题与当前状态，同样不返回 `likeCount`。
 
 `POST /api/admin/ebooks`、`PUT /api/admin/ebooks/{id}`
 

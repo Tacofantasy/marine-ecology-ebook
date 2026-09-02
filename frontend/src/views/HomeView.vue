@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { AppstoreOutlined, ArrowRightOutlined, CalendarOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons-vue'
+import { AppstoreOutlined, ArrowRightOutlined, CalendarOutlined, LikeOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons-vue'
 import { authState } from '../auth/session'
 import { getCategories, type CategoryTreeItem } from '../category/category-api'
 import { getPublicEbooks, type EbookItem } from '../ebook/ebook-api'
@@ -196,8 +196,10 @@ onMounted(() => {
               <h3>{{ ebook.title }}</h3>
               <p class="ebook-summary">{{ ebook.summary || '暂无简介' }}</p>
               <div class="ebook-card-footer">
-                <time v-if="ebook.publishedAt" :datetime="ebook.publishedAt"><CalendarOutlined aria-hidden="true" /> 发布于 {{ formatPublishedAt(ebook.publishedAt) }}</time>
-                <span v-else></span>
+                <div class="ebook-card-stats">
+                  <time v-if="ebook.publishedAt" :datetime="ebook.publishedAt"><CalendarOutlined aria-hidden="true" /> 发布于 {{ formatPublishedAt(ebook.publishedAt) }}</time>
+                  <span><LikeOutlined aria-hidden="true" /> {{ ebook.likeCount ?? '0' }}</span>
+                </div>
                 <RouterLink class="reader-link" :to="`/ebooks/${ebook.id}/read`">开始阅读 <ArrowRightOutlined aria-hidden="true" /></RouterLink>
               </div>
             </div>

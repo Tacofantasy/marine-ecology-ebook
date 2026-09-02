@@ -9,6 +9,8 @@ import com.marine.ecobook.ebook.dto.EbookItem;
 import com.marine.ecobook.ebook.dto.EbookUpsertRequest;
 import com.marine.ecobook.ebook.dto.PageData;
 import com.marine.ecobook.ebook.mapper.ChapterMapper;
+import com.marine.ecobook.ebook.mapper.EbookLikeCount;
+import com.marine.ecobook.ebook.mapper.EbookLikeMapper;
 import com.marine.ecobook.ebook.mapper.EbookMapper;
 import com.marine.ecobook.ebook.model.Ebook;
 import java.time.LocalDateTime;
@@ -30,16 +32,19 @@ public class EbookService {
     private final ChapterMapper chapterMapper;
     private final CategoryMapper categoryMapper;
     private final CoverStorage coverStorage;
+    private final EbookLikeMapper likeMapper;
 
     public EbookService(
             EbookMapper ebookMapper,
             ChapterMapper chapterMapper,
             CategoryMapper categoryMapper,
-            CoverStorage coverStorage) {
+            CoverStorage coverStorage,
+            EbookLikeMapper likeMapper) {
         this.ebookMapper = ebookMapper;
         this.chapterMapper = chapterMapper;
         this.categoryMapper = categoryMapper;
         this.coverStorage = coverStorage;
+        this.likeMapper = likeMapper;
     }
 
     public PageData<EbookItem> listPublic(Long categoryId, String keyword, int page, int pageSize) {
@@ -57,12 +62,12 @@ public class EbookService {
         if (ebook == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "电子书不存在或尚未发布");
         }
-        return toItem(ebook, categoriesById(List.of(ebook)));
+        return toItem(ebook, categoriesById(List.of(ebook)), likeMapper.countByEbookId(ebookId));
     }
 
     public EbookItem getAdmin(long ebookId) {
         Ebook ebook = requiredEbook(ebookId);
-        return toItem(ebook, categoriesById(List.of(ebook)));
+        return toItem(ebook, categoriesById(List.of(ebook)), null);
     }
 
     @Transactional
@@ -75,7 +80,7 @@ public class EbookService {
         ebook.setSourceNote(normalizedOptional(request.sourceNote()));
         ebook.setStatus("DRAFT");
         ebookMapper.insert(ebook);
-        return toItem(ebook, Map.of(category.getId(), category));
+        return toItem(ebook, Map.of(category.getId(), category), null);
     }
 
     @Transactional
@@ -88,7 +93,7 @@ public class EbookService {
         ebook.setSummary(normalizedOptional(request.summary()));
         ebook.setSourceNote(normalizedOptional(request.sourceNote()));
         ebookMapper.updateById(ebook);
-        return toItem(ebook, Map.of(category.getId(), category));
+        return toItem(ebook, Map.of(category.getId(), category), null);
     }
 
     @Transactional
@@ -110,7 +115,7 @@ public class EbookService {
         ebook.setStatus("PUBLISHED");
         ebook.setPublishedAt(LocalDateTime.now());
         ebookMapper.updateById(ebook);
-        return toItem(ebook, categoriesById(List.of(ebook)));
+        return toItem(ebook, categoriesById(List.of(ebook)), null);
     }
 
     @Transactional
@@ -121,7 +126,7 @@ public class EbookService {
         }
         ebook.setStatus("DRAFT");
         ebookMapper.updateById(ebook);
-        return toItem(ebook, categoriesById(List.of(ebook)));
+        return toItem(ebook, categoriesById(List.of(ebook)), null);
     }
 
     @Transactional
@@ -151,14 +156,19 @@ public class EbookService {
                     .or().like(Ebook::getSummary, normalizedKeyword));
         }
         long total = ebookMapper.selectCount(query);
-        int offset = (page - 1) * pageSize;
+        // 用 long 计算偏移量：page 仅有下限，int 乘法在超大页码时会溢出为负 OFFSET。
+        long offset = (long) (page - 1) * pageSize;
         query.orderByDesc(publicOnly, Ebook::getPublishedAt)
                 .orderByDesc(!publicOnly, Ebook::getUpdatedAt)
                 .orderByDesc(Ebook::getId)
                 .last("LIMIT %d OFFSET %d".formatted(pageSize, offset));
         List<Ebook> ebooks = ebookMapper.selectList(query);
         Map<Long, Category> categories = categoriesById(ebooks);
-        return new PageData<>(total, ebooks.stream().map(ebook -> toItem(ebook, categories)).toList());
+        // 仅公开列表填充点赞聚合；管理端响应保持原有字段，不暴露 likeCount。
+        Map<Long, Long> likeCounts = publicOnly ? likeCountsByEbookIds(ebooks) : Map.of();
+        return new PageData<>(total, ebooks.stream()
+                .map(ebook -> toItem(ebook, categories, publicOnly ? likeCounts.getOrDefault(ebook.getId(), 0L) : null))
+                .toList());
     }
 
     private void assertPublishable(Ebook ebook) {
@@ -193,10 +203,25 @@ public class EbookService {
         return result;
     }
 
-    private EbookItem toItem(Ebook ebook, Map<Long, Category> categories) {
+    private EbookItem toItem(Ebook ebook, Map<Long, Category> categories, Long likeCount) {
         Category category = categories.get(ebook.getCategoryId());
         return new EbookItem(ebook.getId(), ebook.getCategoryId(), category == null ? "" : category.getName(), ebook.getTitle(),
-                ebook.getCoverUrl(), ebook.getSummary(), ebook.getSourceNote(), ebook.getStatus(), ebook.getPublishedAt(), ebook.getUpdatedAt());
+                ebook.getCoverUrl(), ebook.getSummary(), ebook.getSourceNote(), ebook.getStatus(), ebook.getPublishedAt(), ebook.getUpdatedAt(), likeCount);
+    }
+
+    /**
+     * 一次批量聚合查询填充本页所有电子书的点赞数，避免列表页 N+1。
+     */
+    private Map<Long, Long> likeCountsByEbookIds(List<Ebook> ebooks) {
+        if (ebooks.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> ids = ebooks.stream().map(Ebook::getId).distinct().toList();
+        Map<Long, Long> result = new HashMap<>();
+        for (EbookLikeCount row : likeMapper.countByEbookIds(ids)) {
+            result.put(row.getEbookId(), row.getLikeCount());
+        }
+        return result;
     }
 
     private Category requiredSecondLevelCategory(long categoryId) {

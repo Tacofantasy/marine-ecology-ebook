@@ -30,6 +30,7 @@ const marineTheme = {
 }
 
 const isAdmin = computed(() => ['ADMIN', 'SUPER_ADMIN'].includes(authState.user?.role ?? ''))
+const isReaderUser = computed(() => authState.user?.role === 'USER')
 const roleLabel = computed(() => {
   const role = authState.user?.role
   return role === 'SUPER_ADMIN' ? '总管理员' : role === 'ADMIN' ? '子管理员' : '注册用户'
@@ -70,6 +71,7 @@ async function logout() {
           <nav class="site-nav" aria-label="主导航">
             <RouterLink class="nav-link" to="/">首页</RouterLink>
             <template v-if="authState.user">
+              <RouterLink v-if="isReaderUser" class="nav-link" to="/favorites">我的收藏</RouterLink>
               <RouterLink v-if="isAdmin" class="nav-link" to="/admin/categories">分类管理</RouterLink>
               <RouterLink v-if="isAdmin" class="nav-link" to="/admin/ebooks">电子书管理</RouterLink>
               <RouterLink class="nav-user" to="/profile" :aria-label="`个人资料：${authState.user.displayName}`">

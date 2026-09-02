@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { message } from 'ant-design-vue'
-import { useRoute } from 'vue-router'
-import { LeftOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { useRoute, useRouter } from 'vue-router'
+import { HeartFilled, HeartOutlined, LeftOutlined, LikeFilled, LikeOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { authState } from '../auth/session'
 import { getPublicChapter, getPublicChapters, recordChapterRead, type ChapterDetail, type ChapterItem } from '../chapter/chapter-api'
 import { getPublicEbook, type EbookItem } from '../ebook/ebook-api'
+import { favoriteEbook, getInteractionState, likeEbook, unfavoriteEbook, unlikeEbook, type InteractionState } from '../interaction/interaction-api'
 
 const route = useRoute()
+const router = useRouter()
 const ebookId = String(route.params.ebookId)
 const ebook = ref<EbookItem | null>(null)
 const chapters = ref<ChapterItem[]>([])
@@ -14,10 +17,15 @@ const activeChapter = ref<ChapterDetail | null>(null)
 const loading = ref(true)
 const chapterLoading = ref(false)
 const error = ref('')
+const interaction = ref<InteractionState | null>(null)
+const interactionLoading = ref<'like' | 'favorite' | null>(null)
+const interactionError = ref('')
 
 const activeIndex = computed(() => chapters.value.findIndex((chapter) => chapter.id === activeChapter.value?.id))
 const prevChapter = computed(() => (activeIndex.value > 0 ? chapters.value[activeIndex.value - 1] : null))
 const nextChapter = computed(() => (activeIndex.value >= 0 && activeIndex.value < chapters.value.length - 1 ? chapters.value[activeIndex.value + 1] : null))
+const isReaderUser = computed(() => authState.user?.role === 'USER')
+const visibleLikeCount = computed(() => interaction.value?.likeCount ?? ebook.value?.likeCount ?? '0')
 
 async function openChapter(chapterId: string) {
   if (activeChapter.value?.id === chapterId || chapterLoading.value) return
@@ -40,11 +48,41 @@ async function load() {
     const [book, items] = await Promise.all([getPublicEbook(ebookId), getPublicChapters(ebookId)])
     ebook.value = book
     chapters.value = items
+    if (isReaderUser.value) {
+      try {
+        interaction.value = await getInteractionState(ebookId)
+      } catch (requestError) {
+        interactionError.value = requestError instanceof Error ? requestError.message : '互动状态加载失败。'
+      }
+    }
     if (items.length > 0) await openChapter(items[0].id)
   } catch (requestError) {
     error.value = requestError instanceof Error ? requestError.message : '阅读内容加载失败，请稍后重试。'
   } finally {
     loading.value = false
+  }
+}
+
+async function toggleInteraction(type: 'like' | 'favorite') {
+  if (!isReaderUser.value) {
+    await router.push({ name: 'login', query: { redirect: route.fullPath } })
+    return
+  }
+  if (interactionLoading.value) return
+
+  interactionError.value = ''
+  interactionLoading.value = type
+  try {
+    const current = interaction.value ?? await getInteractionState(ebookId)
+    interaction.value = type === 'like'
+      ? current.liked ? await unlikeEbook(ebookId) : await likeEbook(ebookId)
+      : current.favorited ? await unfavoriteEbook(ebookId) : await favoriteEbook(ebookId)
+    if (ebook.value) ebook.value.likeCount = interaction.value.likeCount
+  } catch (requestError) {
+    interactionError.value = requestError instanceof Error ? requestError.message : '互动操作失败，请稍后重试。'
+    message.error(interactionError.value)
+  } finally {
+    interactionLoading.value = null
   }
 }
 
@@ -61,6 +99,36 @@ onMounted(() => { void load() })
             <p class="section-kicker">海洋生态 · 在线阅读</p>
             <h1>{{ ebook.title }}</h1>
             <p>{{ ebook.summary || '海洋生态数字阅读内容' }}</p>
+            <div class="reader-interaction" aria-label="电子书互动">
+              <span class="reader-like-count" aria-live="polite"><LikeOutlined aria-hidden="true" /> {{ visibleLikeCount }} 人点赞</span>
+              <template v-if="!authState.user || isReaderUser">
+                <a-button
+                  class="reader-interaction-button"
+                  :type="interaction?.liked ? 'primary' : 'default'"
+                  :loading="interactionLoading === 'like'"
+                  :disabled="interactionLoading !== null"
+                  :aria-pressed="interaction?.liked ?? false"
+                  @click="toggleInteraction('like')"
+                >
+                  <LikeFilled v-if="interaction?.liked" aria-hidden="true" />
+                  <LikeOutlined v-else aria-hidden="true" />
+                  {{ interaction?.liked ? '已点赞' : '点赞' }}
+                </a-button>
+                <a-button
+                  class="reader-interaction-button"
+                  :type="interaction?.favorited ? 'primary' : 'default'"
+                  :loading="interactionLoading === 'favorite'"
+                  :disabled="interactionLoading !== null"
+                  :aria-pressed="interaction?.favorited ?? false"
+                  @click="toggleInteraction('favorite')"
+                >
+                  <HeartFilled v-if="interaction?.favorited" aria-hidden="true" />
+                  <HeartOutlined v-else aria-hidden="true" />
+                  {{ interaction?.favorited ? '已收藏' : '收藏' }}
+                </a-button>
+              </template>
+            </div>
+            <p v-if="interactionError" class="reader-interaction-error" role="alert">{{ interactionError }}</p>
           </div>
           <div class="reader-header-actions">
             <img v-if="ebook.coverUrl" class="reader-cover" :src="ebook.coverUrl" :alt="`${ebook.title} 封面`" />

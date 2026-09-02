@@ -13,6 +13,7 @@ export interface EbookItem {
   status: EbookStatus
   publishedAt: string | null
   updatedAt: string | null
+  likeCount?: string
 }
 
 export interface PageData<T> {

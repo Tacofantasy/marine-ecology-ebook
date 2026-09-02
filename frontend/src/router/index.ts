@@ -9,6 +9,7 @@ declare module 'vue-router' {
   interface RouteMeta {
     requiresAuth?: boolean
     requiresContentAdmin?: boolean
+    requiresReaderUser?: boolean
     guestOnly?: boolean
   }
 }
@@ -26,6 +27,12 @@ const router = createRouter({
     { path: '/login', name: 'login', component: LoginView, meta: { guestOnly: true } },
     { path: '/register', name: 'register', component: RegisterView, meta: { guestOnly: true } },
     { path: '/profile', name: 'profile', component: ProfileView, meta: { requiresAuth: true } },
+    {
+      path: '/favorites',
+      name: 'favorites',
+      component: () => import('../views/FavoritesView.vue'),
+      meta: { requiresAuth: true, requiresReaderUser: true },
+    },
     {
       path: '/admin/categories',
       name: 'category-management',
@@ -60,6 +67,9 @@ router.beforeEach((to) => {
     return { name: 'home' }
   }
   if (to.meta.requiresContentAdmin && !['ADMIN', 'SUPER_ADMIN'].includes(authState.user?.role ?? 'USER')) {
+    return { name: 'home' }
+  }
+  if (to.meta.requiresReaderUser && authState.user?.role !== 'USER') {
     return { name: 'home' }
   }
   return true

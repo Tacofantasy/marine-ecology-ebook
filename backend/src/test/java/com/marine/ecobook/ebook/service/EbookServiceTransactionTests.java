@@ -4,6 +4,7 @@ import com.marine.ecobook.category.mapper.CategoryMapper;
 import com.marine.ecobook.category.model.Category;
 import com.marine.ecobook.common.exception.BusinessException;
 import com.marine.ecobook.ebook.mapper.ChapterMapper;
+import com.marine.ecobook.ebook.mapper.EbookLikeMapper;
 import com.marine.ecobook.ebook.mapper.EbookMapper;
 import com.marine.ecobook.ebook.model.Ebook;
 import java.util.List;
@@ -43,6 +44,9 @@ class EbookServiceTransactionTests {
 
     @Mock
     private CoverStorage coverStorage;
+
+    @Mock
+    private EbookLikeMapper likeMapper;
 
     @Mock
     private MultipartFile file;
