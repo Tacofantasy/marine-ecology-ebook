@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { AppstoreOutlined, ArrowRightOutlined, CalendarOutlined, ReadOutlined, SettingOutlined } from '@ant-design/icons-vue'
 import { authState } from '../auth/session'
 import { getCategories, type CategoryTreeItem } from '../category/category-api'
 import { getPublicEbooks, type EbookItem } from '../ebook/ebook-api'
@@ -107,21 +108,29 @@ onMounted(() => {
 <template>
   <main class="page-shell">
     <section class="hero" aria-labelledby="hero-title">
+      <span class="hero-bubble is-one" aria-hidden="true"></span>
+      <span class="hero-bubble is-two" aria-hidden="true"></span>
+      <span class="hero-bubble is-three" aria-hidden="true"></span>
+      <svg class="hero-waves" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,64 C240,112 480,16 720,48 C960,80 1200,96 1440,56 L1440,120 L0,120 Z" fill="rgba(165, 243, 252, 0.14)" />
+        <path d="M0,88 C260,48 520,112 780,84 C1040,56 1240,72 1440,88 L1440,120 L0,120 Z" fill="rgba(103, 232, 249, 0.12)" />
+      </svg>
+
       <p class="eyebrow">MARINE ECOLOGY · DIGITAL READING</p>
       <h1 id="hero-title">从一页知识，走进蔚蓝生态</h1>
-      <p class="hero-copy">面向海洋科普内容的阅读与管理平台。首期将提供分类浏览、电子书阅读、互动收藏与内容管理。</p>
+      <p class="hero-copy">面向海洋科普内容的阅读与管理平台。在这里按主题浏览分类、沉浸阅读电子书，并与更多海洋知识相遇。</p>
 
-      <a-card v-if="authState.user" class="welcome-card" :bordered="false">
+      <div v-if="authState.user" class="glass-card welcome-card">
         <p>你好，{{ authState.user.displayName }}</p>
-        <span>{{ authState.user.role === 'SUPER_ADMIN' ? '总管理员' : authState.user.role === 'ADMIN' ? '子管理员' : '注册用户' }}</span>
+        <span class="welcome-role">{{ authState.user.role === 'SUPER_ADMIN' ? '总管理员' : authState.user.role === 'ADMIN' ? '子管理员' : '注册用户' }}</span>
         <RouterLink class="text-link" to="/profile">查看个人资料</RouterLink>
-      </a-card>
+      </div>
       <div v-else class="hero-actions">
         <RouterLink class="primary-button" to="/login">登录平台</RouterLink>
         <RouterLink class="secondary-button on-dark" to="/register">注册账号</RouterLink>
       </div>
 
-      <div class="service-card" aria-labelledby="service-title">
+      <div class="glass-card" aria-labelledby="service-title">
         <div>
           <p id="service-title" class="service-label">系统连接状态</p>
           <p class="service-status" :class="{ 'is-ready': healthy, 'is-error': !healthy && !loading }" role="status" aria-live="polite">
@@ -152,6 +161,7 @@ onMounted(() => {
               <a-button
                 v-for="child in category.children"
                 :key="child.id"
+                class="category-pill"
                 :type="selectedCategoryId === child.id ? 'primary' : 'default'"
                 @click="selectCategory(child.id)"
               >
@@ -177,14 +187,19 @@ onMounted(() => {
         <p v-else-if="!ebookLoading && ebooks.length === 0" class="category-empty">暂无已发布电子书。请尝试更换分类或关键词。</p>
         <div v-else class="ebook-grid">
           <article v-for="ebook in ebooks" :key="ebook.id" class="ebook-card">
-            <img v-if="ebook.coverUrl" :src="ebook.coverUrl" :alt="`${ebook.title} 封面`" class="ebook-cover" loading="lazy" />
-            <div v-else class="ebook-cover ebook-cover-placeholder" aria-hidden="true">海洋科普</div>
+            <div class="ebook-cover-wrap">
+              <img v-if="ebook.coverUrl" :src="ebook.coverUrl" :alt="`${ebook.title} 封面`" class="ebook-cover" loading="lazy" />
+              <div v-else class="ebook-cover ebook-cover-placeholder" aria-hidden="true">海洋科普</div>
+            </div>
             <div class="ebook-card-body">
               <p class="ebook-category">{{ ebook.categoryName }}</p>
               <h3>{{ ebook.title }}</h3>
               <p class="ebook-summary">{{ ebook.summary || '暂无简介' }}</p>
-              <time v-if="ebook.publishedAt" :datetime="ebook.publishedAt">发布于 {{ formatPublishedAt(ebook.publishedAt) }}</time>
-              <RouterLink class="reader-link" :to="`/ebooks/${ebook.id}/read`">开始阅读</RouterLink>
+              <div class="ebook-card-footer">
+                <time v-if="ebook.publishedAt" :datetime="ebook.publishedAt"><CalendarOutlined aria-hidden="true" /> 发布于 {{ formatPublishedAt(ebook.publishedAt) }}</time>
+                <span v-else></span>
+                <RouterLink class="reader-link" :to="`/ebooks/${ebook.id}/read`">开始阅读 <ArrowRightOutlined aria-hidden="true" /></RouterLink>
+              </div>
             </div>
           </article>
         </div>
@@ -192,16 +207,30 @@ onMounted(() => {
       <a-pagination v-if="ebookTotal > 10" class="public-pagination" :current="ebookPage" :page-size="ebookPageSize" :total="ebookTotal" :page-size-options="['10', '20']" show-size-changer @change="changeEbookPage" />
     </section>
 
-    <section class="next-steps" aria-labelledby="next-steps-title">
-      <div>
-        <p class="section-kicker">当前进度</p>
-        <h2 id="next-steps-title">内容管理持续完善中</h2>
+    <section aria-labelledby="features-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">平台能力</p>
+          <h2 id="features-title">一站式海洋科普阅读体验</h2>
+        </div>
       </div>
-      <ol>
-        <li>Vue 3 前端已连接 Spring Boot 健康检查接口</li>
-        <li>可在浏览器完成注册、登录与身份验证</li>
-        <li>已接入两级分类、电子书草稿与公开电子书查询</li>
-      </ol>
+      <div class="feature-grid">
+        <article class="feature-card">
+          <span class="feature-icon" aria-hidden="true"><AppstoreOutlined /></span>
+          <h3>两级分类导览</h3>
+          <p>按海洋生态主题组织内容，一级分类统领方向、二级分类精确归属，快速定位感兴趣的科普领域。</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon" aria-hidden="true"><ReadOutlined /></span>
+          <h3>沉浸式章节阅读</h3>
+          <p>电子书由线性章节构成，阅读页提供目录导航与上下文切换，阅读量统计帮助内容持续优化。</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon" aria-hidden="true"><SettingOutlined /></span>
+          <h3>规范化内容管理</h3>
+          <p>草稿先行、发布校验、来源披露，管理员在后台完成从录入、编辑到发布的全流程维护。</p>
+        </article>
+      </div>
     </section>
   </main>
 </template>

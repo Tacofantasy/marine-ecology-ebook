@@ -116,7 +116,7 @@ onMounted(loadCategories)
         <a-table-column title="分类名称" data-index="name" key="name" />
         <a-table-column title="层级" key="level" :width="120">
           <template #default="{ record }">
-            {{ record.parentId === null ? '一级分类' : '二级分类' }}
+            <a-tag :color="record.parentId === null ? 'geekblue' : 'cyan'">{{ record.parentId === null ? '一级分类' : '二级分类' }}</a-tag>
           </template>
         </a-table-column>
         <a-table-column title="排序" data-index="sortOrder" key="sortOrder" :width="100" />

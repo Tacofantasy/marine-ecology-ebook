@@ -1,0 +1,2 @@
+ALTER TABLE chapters
+    ADD COLUMN view_count BIGINT UNSIGNED NOT NULL DEFAULT 0 AFTER status;

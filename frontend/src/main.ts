@@ -1,5 +1,5 @@
 import { createApp } from 'vue'
-import { Alert, Button, Card, Drawer, Form, Input, Layout, Modal, Pagination, Popconfirm, Select, Space, Spin, Table, Tag, Upload } from 'ant-design-vue'
+import { Alert, Button, Card, ConfigProvider, Drawer, Form, Input, Layout, Modal, Pagination, Popconfirm, Select, Space, Spin, Table, Tag, Upload } from 'ant-design-vue'
 import 'ant-design-vue/dist/reset.css'
 import './style.css'
 import App from './App.vue'
@@ -9,6 +9,7 @@ createApp(App)
   .use(Alert)
   .use(Button)
   .use(Card)
+  .use(ConfigProvider)
   .use(Drawer)
   .use(Form)
   .use(Input)

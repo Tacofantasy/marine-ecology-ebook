@@ -206,7 +206,7 @@ onMounted(async () => {
           </template>
         </a-table-column>
         <a-table-column title="状态" key="status" :width="110">
-          <template #default="{ record }"><a-tag :color="record.status === 'PUBLISHED' ? 'green' : 'blue'">{{ record.status === 'PUBLISHED' ? '已发布' : '草稿' }}</a-tag></template>
+          <template #default="{ record }"><a-tag :color="record.status === 'PUBLISHED' ? 'green' : 'cyan'">{{ record.status === 'PUBLISHED' ? '已发布' : '草稿' }}</a-tag></template>
         </a-table-column>
         <a-table-column title="发布时间" key="publishedAt" :width="180"><template #default="{ record }">{{ formatTime(record.publishedAt) }}</template></a-table-column>
         <a-table-column title="最近更新" key="updatedAt" :width="180"><template #default="{ record }">{{ formatTime(record.updatedAt) }}</template></a-table-column>
