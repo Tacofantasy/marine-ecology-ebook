@@ -13,6 +13,7 @@ import com.marine.ecobook.ebook.mapper.ChapterMapper;
 import com.marine.ecobook.ebook.mapper.EbookMapper;
 import com.marine.ecobook.ebook.model.Chapter;
 import com.marine.ecobook.ebook.model.Ebook;
+import com.marine.ecobook.stats.service.StatsService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -38,16 +39,19 @@ public class ChapterService {
     private final EbookMapper ebookMapper;
     private final HtmlSanitizer htmlSanitizer;
     private final StringRedisTemplate redisTemplate;
+    private final StatsService statsService;
 
     public ChapterService(
             ChapterMapper chapterMapper,
             EbookMapper ebookMapper,
             HtmlSanitizer htmlSanitizer,
-            StringRedisTemplate redisTemplate) {
+            StringRedisTemplate redisTemplate,
+            StatsService statsService) {
         this.chapterMapper = chapterMapper;
         this.ebookMapper = ebookMapper;
         this.htmlSanitizer = htmlSanitizer;
         this.redisTemplate = redisTemplate;
+        this.statsService = statsService;
     }
 
     @Transactional
@@ -66,6 +70,7 @@ public class ChapterService {
         chapter.setStatus("PUBLISHED");
         chapter.setSourceNote(sourceNote);
         chapter.setViewCount(0L);
+        chapter.setWordCount((long) htmlSanitizer.toPlainText(sanitizedContent).length());
         chapterMapper.insert(chapter);
         return toItem(chapter);
     }
@@ -81,6 +86,7 @@ public class ChapterService {
         chapter.setTitle(title);
         chapter.setContent(sanitizedContent);
         chapter.setSourceNote(sourceNote);
+        chapter.setWordCount((long) htmlSanitizer.toPlainText(sanitizedContent).length());
         chapter.setUpdatedAt(LocalDateTime.now());
         chapterMapper.updateById(chapter);
         return toItem(chapter);
@@ -194,6 +200,8 @@ public class ChapterService {
         if (Boolean.TRUE.equals(isNew)) {
             chapterMapper.incrementViewCount(chapterId);
             ebookMapper.incrementViewCount(ebookId);
+            // 当日阅读量日计数（Redis），供首页“今日阅读”卡片与每日快照使用
+            statsService.incrementReadCount(java.time.LocalDate.now());
         }
     }
 

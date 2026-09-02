@@ -9,6 +9,7 @@ declare module 'vue-router' {
   interface RouteMeta {
     requiresAuth?: boolean
     requiresContentAdmin?: boolean
+    requiresSuperAdmin?: boolean
     requiresReaderUser?: boolean
     guestOnly?: boolean
   }
@@ -49,6 +50,12 @@ const router = createRouter({
       path: '/admin/ebooks/:ebookId/chapters',
       name: 'chapter-management',
       component: () => import('../views/ChapterManagementView.vue'),
+      meta: { requiresAuth: true, requiresContentAdmin: true },
+    },
+    {
+      path: '/admin/users',
+      name: 'user-management',
+      component: () => import('../views/UserManagementView.vue'),
       meta: { requiresAuth: true, requiresContentAdmin: true },
     },
     {

@@ -44,13 +44,22 @@ function toggleHeading(level: 2 | 3) {
 }
 
 function setLink() {
-  const url = window.prompt('请输入链接地址（仅支持 http 或 https）：')
+  const editorInstance = editor.value
+  if (!editorInstance) return
+  const { empty } = editorInstance.state.selection
+  const url = window.prompt(empty ? '请输入链接地址，将作为链接文字插入：' : '请输入链接地址（仅支持 http 或 https）：')
   if (!url) return
   if (!/^https?:\/\//i.test(url)) {
     message.warning('链接仅支持 http 或 https 地址')
     return
   }
-  editor.value?.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+  if (empty) {
+    // 空选区时 setLink 只会设置暂存标记（界面上看不到），改为把 URL 本身作为链接文字直接插入
+    const safeUrl = url.replace(/"/g, '%22')
+    editorInstance.chain().focus().insertContent(`<a href="${safeUrl}">${safeUrl}</a>`).run()
+    return
+  }
+  editorInstance.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
 }
 
 async function uploadImage(event: Event) {

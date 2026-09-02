@@ -14,6 +14,7 @@ public class Chapter {
     private String status;
     private Long viewCount;
     private String sourceNote;
+    private Long wordCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -33,6 +34,8 @@ public class Chapter {
     public void setViewCount(Long viewCount) { this.viewCount = viewCount; }
     public String getSourceNote() { return sourceNote; }
     public void setSourceNote(String sourceNote) { this.sourceNote = sourceNote; }
+    public Long getWordCount() { return wordCount; }
+    public void setWordCount(Long wordCount) { this.wordCount = wordCount; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

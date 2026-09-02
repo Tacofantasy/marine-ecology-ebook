@@ -74,6 +74,7 @@ async function logout() {
               <RouterLink v-if="isReaderUser" class="nav-link" to="/favorites">我的收藏</RouterLink>
               <RouterLink v-if="isAdmin" class="nav-link" to="/admin/categories">分类管理</RouterLink>
               <RouterLink v-if="isAdmin" class="nav-link" to="/admin/ebooks">电子书管理</RouterLink>
+              <RouterLink v-if="isAdmin" class="nav-link" to="/admin/users">用户管理</RouterLink>
               <RouterLink class="nav-user" to="/profile" :aria-label="`个人资料：${authState.user.displayName}`">
                 <span class="nav-user-avatar" aria-hidden="true">{{ userInitial }}</span>
                 <span class="nav-user-name">{{ authState.user.displayName }}</span>
@@ -121,6 +122,7 @@ async function logout() {
               <ul class="footer-links">
                 <li><RouterLink to="/admin/categories">分类管理</RouterLink></li>
                 <li><RouterLink to="/admin/ebooks">电子书管理</RouterLink></li>
+                <li><RouterLink to="/admin/users">用户管理</RouterLink></li>
               </ul>
             </nav>
             <div v-else>

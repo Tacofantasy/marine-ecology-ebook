@@ -4,6 +4,7 @@ import { AppstoreOutlined, ArrowRightOutlined, CalendarOutlined, LikeOutlined, R
 import { authState } from '../auth/session'
 import { getCategories, type CategoryTreeItem } from '../category/category-api'
 import { getPublicEbooks, type EbookItem } from '../ebook/ebook-api'
+import StatsPanel from '../stats/StatsPanel.vue'
 
 interface HealthPayload {
   service: string
@@ -141,6 +142,8 @@ onMounted(() => {
         <a-button :loading="loading" @click="checkHealth">重新检查</a-button>
       </div>
     </section>
+
+    <StatsPanel />
 
     <section class="category-browser" aria-labelledby="category-title">
       <div class="section-heading">

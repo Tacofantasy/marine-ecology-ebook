@@ -14,6 +14,7 @@ const router = useRouter()
 const ebookId = computed(() => String(route.params.ebookId))
 const ebook = ref<EbookItem | null>(null)
 const chapters = ref<ChapterItem[]>([])
+const keyword = ref('')
 const loading = ref(false)
 const saving = ref(false)
 const ordering = ref(false)
@@ -23,6 +24,15 @@ const form = reactive({ title: '', content: '', sourceNote: '' })
 const initialForm = ref('')
 const isDraft = computed(() => ebook.value?.status === 'DRAFT')
 const drawerTitle = computed(() => editing.value ? '编辑章节' : '新增章节')
+// 本地关键词过滤：章节随电子书全量加载，搜索在前端完成，避免改变后端全量返回语义
+const filteredChapters = computed(() => {
+  const kw = keyword.value.trim().toLowerCase()
+  if (!kw) return chapters.value
+  return chapters.value.filter(
+    (chapter) => chapter.title.toLowerCase().includes(kw)
+      || (chapter.sourceNote ?? '').toLowerCase().includes(kw),
+  )
+})
 
 async function load() {
   loading.value = true
@@ -102,7 +112,9 @@ async function remove(chapter: ChapterItem) {
   }
 }
 
-async function move(index: number, direction: -1 | 1) {
+async function move(chapter: ChapterItem, direction: -1 | 1) {
+  const index = chapters.value.findIndex((item) => item.id === chapter.id)
+  if (index < 0) return
   const target = index + direction
   if (target < 0 || target >= chapters.value.length || ordering.value) return
   const next = [...chapters.value]
@@ -154,14 +166,23 @@ onMounted(() => { void load() })
     <a-alert v-if="ebook && !isDraft" class="management-alert" type="info" show-icon message="已发布电子书的章节内容已锁定" description="为避免前台读到未完成内容，请先返回电子书管理页撤回，再进行新增、编辑、删除或排序。" />
 
     <a-card :bordered="false" class="management-card" :loading="loading">
+      <div class="management-toolbar">
+        <a-input-search
+          v-model:value="keyword"
+          allow-clear
+          class="management-search"
+          placeholder="搜索章节标题或来源"
+        />
+      </div>
       <p v-if="!loading && chapters.length === 0" class="management-empty">尚未添加章节。至少添加一篇正文非空章节后，电子书才可发布。</p>
+      <p v-else-if="!loading && filteredChapters.length === 0" class="management-empty">未找到匹配的章节，请更换关键词。</p>
       <ol v-else class="chapter-management-list">
-        <li v-for="(chapter, index) in chapters" :key="chapter.id" class="chapter-management-item">
+        <li v-for="(chapter, index) in filteredChapters" :key="chapter.id" class="chapter-management-item">
           <div class="chapter-number" aria-hidden="true">{{ index + 1 }}</div>
           <div class="chapter-management-copy"><strong>{{ chapter.title }}</strong><span>{{ chapter.sourceNote || '未填写章节来源补充' }}</span></div>
           <a-space class="chapter-management-actions">
-            <a-button size="small" :disabled="!isDraft || ordering || index === 0" @click="move(index, -1)">上移</a-button>
-            <a-button size="small" :disabled="!isDraft || ordering || index === chapters.length - 1" @click="move(index, 1)">下移</a-button>
+            <a-button size="small" :disabled="!isDraft || ordering || index === 0" @click="move(chapter, -1)">上移</a-button>
+            <a-button size="small" :disabled="!isDraft || ordering || index === filteredChapters.length - 1" @click="move(chapter, 1)">下移</a-button>
             <a-button size="small" :disabled="!isDraft" @click="openEdit(chapter)">编辑</a-button>
             <a-popconfirm title="确定删除此章节吗？删除后无法恢复。" ok-text="删除" cancel-text="取消" @confirm="remove(chapter)">
               <a-button size="small" danger :disabled="!isDraft">删除</a-button>

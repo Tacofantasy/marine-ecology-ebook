@@ -887,6 +887,16 @@ a:focus-visible {
   margin-top: 24px;
 }
 
+.management-toolbar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 16px;
+}
+
+.management-search {
+  max-width: 320px;
+}
+
 /* ---------- 8. 认证页 ---------- */
 .auth-shell {
   display: grid;
@@ -1568,6 +1578,8 @@ a:focus-visible {
   font-size: 1.06rem;
   line-height: 1.8;
   overflow-wrap: anywhere;
+  /* 与 .rich-text-content 保持一致：允许合成斜体 */
+  font-synthesis: style;
 }
 
 .reader-source {
@@ -1674,6 +1686,8 @@ a:focus-visible {
   color: #163f54;
   line-height: 1.8;
   outline: none;
+  /* 微软雅黑等字体没有斜体字形，允许浏览器合成斜体（全局 :root 关闭了合成） */
+  font-synthesis: style;
 }
 
 .rich-text-content > :first-child,
