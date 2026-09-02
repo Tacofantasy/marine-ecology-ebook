@@ -47,6 +47,11 @@ public class AdminEbookController {
         return ApiResponse.success(ebookService.listAdmin(categoryId, keyword, page, pageSize));
     }
 
+    @GetMapping("/{ebookId}")
+    public ApiResponse<EbookItem> detail(@PathVariable long ebookId) {
+        return ApiResponse.success(ebookService.getAdmin(ebookId));
+    }
+
     @PostMapping
     public ApiResponse<EbookItem> create(@Valid @RequestBody EbookUpsertRequest request) {
         return ApiResponse.success(ebookService.create(request));

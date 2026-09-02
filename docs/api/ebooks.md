@@ -22,6 +22,10 @@
 
 返回全部状态的电子书，按最近更新时间倒序。
 
+`GET /api/admin/ebooks/{id}`
+
+读取单本电子书（草稿和已发布均可），供章节管理页展示标题与当前状态。
+
 `POST /api/admin/ebooks`、`PUT /api/admin/ebooks/{id}`
 
 请求体示例：
@@ -48,3 +52,7 @@
 - `POST /api/admin/ebooks/{id}/publish`：发布前校验二级分类、标题、20–500 字简介、封面、来源说明及至少一篇正文非空章节。
 - `POST /api/admin/ebooks/{id}/unpublish`：将已发布电子书撤回为草稿。
 - `DELETE /api/admin/ebooks/{id}`：仅草稿可删除，同时删除其独占封面文件。
+
+## 章节与在线阅读
+
+章节采用同级线性目录，按 `sortOrder` 升序排列。章节相关接口及正文图片上传说明见 [章节接口](chapters.md)。草稿电子书的章节可维护；已发布电子书须先撤回后再修改章节。

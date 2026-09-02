@@ -47,8 +47,16 @@ export function getPublicEbooks(query: EbookQuery) {
   return apiRequest<PageData<EbookItem>>(`/api/ebooks?${queryString(query)}`)
 }
 
+export function getPublicEbook(ebookId: string) {
+  return apiRequest<EbookItem>(`/api/ebooks/${ebookId}`)
+}
+
 export function getAdminEbooks(query: EbookQuery) {
   return apiRequest<PageData<EbookItem>>(`/api/admin/ebooks?${queryString(query)}`, {}, true)
+}
+
+export function getAdminEbook(ebookId: string) {
+  return apiRequest<EbookItem>(`/api/admin/ebooks/${ebookId}`, {}, true)
 }
 
 export function createEbook(payload: EbookPayload) {

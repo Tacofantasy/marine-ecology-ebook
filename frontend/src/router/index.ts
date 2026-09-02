@@ -32,6 +32,17 @@ const router = createRouter({
       component: () => import('../views/EbookManagementView.vue'),
       meta: { requiresAuth: true, requiresContentAdmin: true },
     },
+    {
+      path: '/admin/ebooks/:ebookId/chapters',
+      name: 'chapter-management',
+      component: () => import('../views/ChapterManagementView.vue'),
+      meta: { requiresAuth: true, requiresContentAdmin: true },
+    },
+    {
+      path: '/ebooks/:ebookId/read',
+      name: 'reader',
+      component: () => import('../views/ReaderView.vue'),
+    },
   ],
 })
 

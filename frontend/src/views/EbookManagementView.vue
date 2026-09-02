@@ -210,9 +210,10 @@ onMounted(async () => {
         </a-table-column>
         <a-table-column title="发布时间" key="publishedAt" :width="180"><template #default="{ record }">{{ formatTime(record.publishedAt) }}</template></a-table-column>
         <a-table-column title="最近更新" key="updatedAt" :width="180"><template #default="{ record }">{{ formatTime(record.updatedAt) }}</template></a-table-column>
-        <a-table-column title="操作" key="actions" :width="230" fixed="right">
+        <a-table-column title="操作" key="actions" :width="290" fixed="right">
           <template #default="{ record }">
             <a-space>
+              <RouterLink :to="`/admin/ebooks/${record.id}/chapters`"><a-button type="link">章节</a-button></RouterLink>
               <a-button v-if="record.status === 'DRAFT'" type="link" @click="openEdit(record)">编辑</a-button>
               <a-popconfirm :title="record.status === 'DRAFT' ? '发布前会校验简介、封面、来源和章节，确定继续吗？' : '确定撤回该电子书吗？'" ok-text="确定" cancel-text="取消" @confirm="changeStatus(record)">
                 <a-button type="link">{{ record.status === 'DRAFT' ? '发布' : '撤回' }}</a-button>

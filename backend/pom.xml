@@ -21,6 +21,7 @@
         <java.version>17</java.version>
         <mybatis-plus.version>3.5.17</mybatis-plus.version>
         <sa-token.version>1.45.0</sa-token.version>
+        <owasp.html-sanitizer.version>20240325.1</owasp.html-sanitizer.version>
         <excluded.junit.tags>integration</excluded.junit.tags>
     </properties>
 
@@ -69,6 +70,22 @@
             <groupId>org.sejda.imageio</groupId>
             <artifactId>webp-imageio</artifactId>
             <version>0.1.6</version>
+        </dependency>
+        <dependency>
+            <groupId>com.googlecode.owasp-java-html-sanitizer</groupId>
+            <artifactId>owasp-java-html-sanitizer</artifactId>
+            <version>${owasp.html-sanitizer.version}</version>
+        </dependency>
+        <!-- IntelliJ 直接运行应用时不会可靠地带上 bundle 的 shim 传递依赖，显式声明。 -->
+        <dependency>
+            <groupId>com.googlecode.owasp-java-html-sanitizer</groupId>
+            <artifactId>java8-shim</artifactId>
+            <version>${owasp.html-sanitizer.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.googlecode.owasp-java-html-sanitizer</groupId>
+            <artifactId>java10-shim</artifactId>
+            <version>${owasp.html-sanitizer.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

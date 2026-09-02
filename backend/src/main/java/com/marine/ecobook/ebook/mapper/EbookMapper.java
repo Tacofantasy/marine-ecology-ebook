@@ -5,6 +5,7 @@ import com.marine.ecobook.ebook.model.Ebook;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface EbookMapper extends BaseMapper<Ebook> {
@@ -16,4 +17,7 @@ public interface EbookMapper extends BaseMapper<Ebook> {
               AND CHAR_LENGTH(TRIM(REGEXP_REPLACE(content, '<[^>]*>', ''))) > 0
             """)
     long countNonEmptyChapters(@Param("ebookId") long ebookId);
+
+    @Update("UPDATE ebooks SET view_count = view_count + 1 WHERE id = #{ebookId}")
+    int incrementViewCount(@Param("ebookId") long ebookId);
 }

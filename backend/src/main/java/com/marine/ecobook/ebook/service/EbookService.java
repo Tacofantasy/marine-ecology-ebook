@@ -60,6 +60,11 @@ public class EbookService {
         return toItem(ebook, categoriesById(List.of(ebook)));
     }
 
+    public EbookItem getAdmin(long ebookId) {
+        Ebook ebook = requiredEbook(ebookId);
+        return toItem(ebook, categoriesById(List.of(ebook)));
+    }
+
     @Transactional
     public EbookItem create(EbookUpsertRequest request) {
         Category category = requiredSecondLevelCategory(request.categoryId());

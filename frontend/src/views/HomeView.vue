@@ -184,6 +184,7 @@ onMounted(() => {
               <h3>{{ ebook.title }}</h3>
               <p class="ebook-summary">{{ ebook.summary || '暂无简介' }}</p>
               <time v-if="ebook.publishedAt" :datetime="ebook.publishedAt">发布于 {{ formatPublishedAt(ebook.publishedAt) }}</time>
+              <RouterLink class="reader-link" :to="`/ebooks/${ebook.id}/read`">开始阅读</RouterLink>
             </div>
           </article>
         </div>
