@@ -82,6 +82,13 @@ function search() {
   void loadEbooks()
 }
 
+function resetFilters() {
+  filters.categoryId = undefined
+  filters.keyword = ''
+  filters.page = 1
+  void loadEbooks()
+}
+
 function resetForm() {
   releasePreview()
   form.categoryId = undefined
@@ -223,9 +230,12 @@ onMounted(async () => {
       <div class="management-filters">
         <a-select v-model:value="filters.categoryId" allow-clear placeholder="全部二级分类" :options="categoryOptions" @change="search" />
         <a-input-search v-model:value="filters.keyword" allow-clear placeholder="搜索标题或简介" enter-button="搜索" @search="search" />
+        <a-button v-if="filters.categoryId || filters.keyword" @click="resetFilters">重置</a-button>
       </div>
 
-      <a-table :data-source="ebooks" :loading="loading" :pagination="false" row-key="id" :scroll="{ x: 900 }">
+      <div class="management-summary"><span>共 {{ total }} 本电子书</span><span>草稿完善后才可发布，已发布内容需先撤回再修改</span></div>
+
+      <a-table class="desktop-management-table" :data-source="ebooks" :loading="loading" :pagination="false" row-key="id" :scroll="{ x: 900 }">
         <a-table-column title="电子书" key="title" :width="260">
           <template #default="{ record }">
             <div class="ebook-table-title">
@@ -255,6 +265,25 @@ onMounted(async () => {
           </template>
         </a-table-column>
       </a-table>
+      <div class="mobile-management-list" :aria-busy="loading">
+        <article v-for="record in ebooks" :key="record.id" class="mobile-management-card">
+          <div class="mobile-management-heading">
+            <div class="ebook-table-title">
+              <img v-if="record.coverUrl" :src="record.coverUrl" :alt="`${record.title} 封面`" loading="lazy" />
+              <span v-else class="cover-placeholder" aria-hidden="true">海洋</span>
+              <div><strong>{{ record.title }}</strong><small>{{ record.categoryName }}</small></div>
+            </div>
+            <a-tag :color="record.status === 'PUBLISHED' ? 'green' : 'cyan'">{{ record.status === 'PUBLISHED' ? '已发布' : '草稿' }}</a-tag>
+          </div>
+          <dl><div><dt>发布时间</dt><dd>{{ formatTime(record.publishedAt) }}</dd></div><div><dt>最近更新</dt><dd>{{ formatTime(record.updatedAt) }}</dd></div></dl>
+          <div class="mobile-management-actions">
+            <RouterLink :to="`/admin/ebooks/${record.id}/chapters`"><a-button>管理章节</a-button></RouterLink>
+            <a-button v-if="record.status === 'DRAFT'" @click="openEdit(record)">编辑</a-button>
+            <a-popconfirm :title="record.status === 'DRAFT' ? '发布前会校验简介、封面、来源和章节，确定继续吗？' : '确定撤回该电子书吗？'" ok-text="确定" cancel-text="取消" @confirm="changeStatus(record)"><a-button>{{ record.status === 'DRAFT' ? '发布' : '撤回' }}</a-button></a-popconfirm>
+            <a-popconfirm v-if="record.status === 'DRAFT'" title="将永久删除该草稿、其章节和封面，且无法恢复。确定继续吗？" ok-text="删除" cancel-text="取消" @confirm="remove(record)"><a-button danger>删除</a-button></a-popconfirm>
+          </div>
+        </article>
+      </div>
       <p v-if="!loading && ebooks.length === 0" class="management-empty">暂无符合条件的电子书。你可以新建一份草稿开始录入。</p>
       <a-pagination class="management-pagination" :current="filters.page" :page-size="filters.pageSize" :total="total" :page-size-options="['10', '20']" show-size-changer @change="changePage" />
     </a-card>

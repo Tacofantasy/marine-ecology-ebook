@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { Alert, Button, Card, ConfigProvider, Drawer, Form, Input, Layout, Modal, Pagination, Popconfirm, Select, Space, Spin, Table, Tag, Upload } from 'ant-design-vue'
 import 'ant-design-vue/dist/reset.css'
 import './style.css'
+import './styles/redesign.css'
 import App from './App.vue'
 import router from './router'
 

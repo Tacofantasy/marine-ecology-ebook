@@ -54,10 +54,10 @@ async function loadStats() {
 function renderChart() {
   if (!chartContainer.value || !chart) return
   chart.setOption({
-    title: { text: '近 30 天阅读 / 点赞趋势', left: 'center', textStyle: { fontSize: 14 } },
+    title: { text: '近 30 天趋势', left: 16, textStyle: { color: '#12384a', fontSize: 14, fontWeight: 700 } },
     tooltip: { trigger: 'axis' },
-    legend: { data: ['日增阅读量', '日增点赞量'], top: 28 },
-    grid: { left: 48, right: 24, top: 64, bottom: 32 },
+    legend: { data: ['日增阅读量', '日增点赞量'], top: 2, right: 58 },
+    grid: { left: 48, right: 24, top: 58, bottom: 34 },
     toolbox: {
       feature: {
         saveAsImage: { title: '导出图片', name: 'marine-ebook-trend-30d' },
@@ -67,7 +67,7 @@ function renderChart() {
     xAxis: {
       type: 'category',
       data: trend.value.map((point) => point.date.slice(5)),
-      axisLabel: { rotate: 45 },
+      axisLabel: { interval: 4, color: '#68828c' },
     },
     yAxis: { type: 'value', minInterval: 1 },
     series: [
@@ -78,8 +78,9 @@ function renderChart() {
         symbol: 'circle',
         symbolSize: 6,
         data: trend.value.map((point) => point.viewDelta),
-        itemStyle: { color: '#075985' },
-        areaStyle: { opacity: 0.08 },
+        itemStyle: { color: '#08658a' },
+        lineStyle: { width: 3 },
+        areaStyle: { opacity: 0.06 },
       },
       {
         name: '日增点赞量',
@@ -88,8 +89,9 @@ function renderChart() {
         symbol: 'circle',
         symbolSize: 6,
         data: trend.value.map((point) => point.likeDelta),
-        itemStyle: { color: '#0e7490' },
-        areaStyle: { opacity: 0.08 },
+        itemStyle: { color: '#16a8b8' },
+        lineStyle: { width: 3, type: 'dashed' },
+        areaStyle: { opacity: 0.05 },
       },
     ],
   })
@@ -122,6 +124,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div v-show="!errorText">
+        <p class="stats-a11y-summary">平台当前共有 {{ formatNumber(summary?.publishedEbookCount) }} 本已发布电子书，累计阅读 {{ formatNumber(summary?.totalViewCount) }} 次，累计点赞 {{ formatNumber(summary?.totalLikeCount) }} 次。</p>
         <div class="stats-cards">
           <div class="stats-card">
             <p class="stats-label" title="当前在库电子书的累计阅读；删除电子书后不再计入">在库累计阅读</p>
@@ -159,47 +162,55 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .stats-section {
-  margin: 32px 0;
+  margin: 20px 0 0;
 }
 
 .stats-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .stats-card {
+  min-width: 0;
+  padding: 17px;
   background: #fff;
-  border: 1px solid #d9edf2;
-  border-radius: 12px;
-  padding: 16px 18px;
-  box-shadow: 0 1px 3px rgba(7, 89, 133, 0.06);
+  border: 1px solid #d5e5e7;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(7, 56, 78, 0.05);
 }
 
 .stats-label {
-  margin: 0 0 6px;
-  font-size: 0.85rem;
-  color: #48677a;
+  margin: 0 0 9px;
+  overflow: hidden;
+  color: #527180;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stats-value {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #075985;
+  overflow: hidden;
+  color: #08658a;
+  font-size: clamp(1.2rem, 2vw, 1.65rem);
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
 .stats-value-text {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
 }
 
 .stats-chart-card {
-  margin-top: 16px;
+  margin-top: 12px;
+  padding: 18px 12px 8px;
   background: #fff;
-  border: 1px solid #d9edf2;
-  border-radius: 12px;
-  padding: 16px 8px 8px;
+  border: 1px solid #d5e5e7;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(7, 56, 78, 0.05);
 }
 
 .stats-chart {
@@ -208,8 +219,43 @@ onBeforeUnmount(() => {
 }
 
 .stats-error {
-  text-align: center;
   padding: 24px;
-  color: #a04040;
+  color: #a33333;
+  text-align: center;
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  border-radius: 14px;
+}
+
+.stats-a11y-summary {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 1080px) {
+  .stats-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .stats-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats-chart-card {
+    padding-inline: 0;
+  }
+
+  .stats-chart {
+    height: 280px;
+  }
 }
 </style>

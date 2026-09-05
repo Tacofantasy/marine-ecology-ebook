@@ -51,10 +51,10 @@ async function submit() {
 
         <a-form class="auth-form" :model="form" layout="vertical" @finish="submit">
           <a-form-item label="登录名或邮箱" name="account" :rules="[{ required: true, message: '请输入登录名或邮箱' }]">
-            <a-input v-model:value="form.account" autocomplete="username" maxlength="255" />
+            <a-input v-model:value="form.account" autocomplete="username" :maxlength="255" />
           </a-form-item>
           <a-form-item label="密码" name="password" :rules="[{ required: true, message: '请输入密码' }]">
-            <a-input-password v-model:value="form.password" autocomplete="current-password" maxlength="64" />
+            <a-input-password v-model:value="form.password" autocomplete="current-password" :maxlength="64" />
           </a-form-item>
           <a-alert v-if="errorMessage" class="form-alert" type="error" :message="errorMessage" show-icon />
           <a-button class="form-button" type="primary" html-type="submit" block :loading="submitting">登录</a-button>

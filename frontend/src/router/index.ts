@@ -37,6 +37,12 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresReaderUser: true },
     },
     {
+      path: '/admin',
+      name: 'admin-dashboard',
+      component: () => import('../views/AdminDashboardView.vue'),
+      meta: { requiresAuth: true, requiresContentAdmin: true },
+    },
+    {
       path: '/admin/categories',
       name: 'category-management',
       component: () => import('../views/CategoryManagementView.vue'),

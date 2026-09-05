@@ -58,6 +58,14 @@ function search() {
   void loadUsers()
 }
 
+function resetFilters() {
+  filters.keyword = ''
+  filters.role = undefined
+  filters.status = undefined
+  filters.page = 1
+  void loadUsers()
+}
+
 function changePage(page: number, pageSize: number) {
   filters.page = page
   filters.pageSize = pageSize
@@ -188,7 +196,10 @@ onMounted(loadUsers)
           <a-select v-model:value="filters.status" allow-clear placeholder="全部状态" :options="[{ value: 1, label: '正常' }, { value: 0, label: '已禁用' }]" @change="search" />
         </a-form-item>
         <a-form-item><a-button html-type="submit" type="primary">搜索</a-button></a-form-item>
+        <a-form-item v-if="filters.keyword || filters.role || filters.status !== undefined"><a-button @click="resetFilters">重置</a-button></a-form-item>
       </a-form>
+
+      <div class="management-summary"><span>共 {{ total }} 个可管理账号</span><span>{{ isSuperAdmin ? '总管理员可维护注册用户与子管理员' : '子管理员仅维护注册用户' }}</span></div>
 
       <a-alert v-if="errorText" class="management-alert" type="error" :message="errorText" show-icon>
         <template #action><a-button size="small" @click="loadUsers">重新加载</a-button></template>
@@ -196,6 +207,7 @@ onMounted(loadUsers)
 
       <a-table
         v-else
+        class="desktop-management-table"
         :data-source="users"
         :loading="loading"
         :pagination="false"
@@ -225,6 +237,26 @@ onMounted(loadUsers)
           </template>
         </a-table-column>
       </a-table>
+
+      <div v-if="!errorText" class="mobile-management-list" :aria-busy="loading">
+        <article v-for="record in users" :key="record.id" class="mobile-management-card">
+          <div class="mobile-management-heading">
+            <div class="mobile-user-identity"><span>{{ record.displayName.trim().charAt(0).toUpperCase() }}</span><div><strong>{{ record.displayName }}</strong><small>{{ record.username }}</small></div></div>
+            <a-tag :color="record.status === 1 ? 'green' : 'orange'">{{ record.status === 1 ? '正常' : '已禁用' }}</a-tag>
+          </div>
+          <dl>
+            <div><dt>角色</dt><dd>{{ roleLabels[record.role] ?? record.role }}</dd></div>
+            <div><dt>邮箱</dt><dd>{{ record.email || '未设置' }}</dd></div>
+            <div><dt>注册时间</dt><dd>{{ formatTime(record.createdAt) }}</dd></div>
+          </dl>
+          <div class="mobile-management-actions">
+            <a-popconfirm v-if="record.status === 1" :title="`确定禁用账号 ${record.username} 吗？该账号将立即下线，之后可重新启用。`" ok-text="禁用" ok-type="danger" cancel-text="取消" @confirm="changeStatus(record, 0)"><a-button :loading="actionKey === actionFor(record, 'status-0')" danger>禁用</a-button></a-popconfirm>
+            <a-popconfirm v-else :title="`确定启用账号 ${record.username} 吗？`" ok-text="启用" cancel-text="取消" @confirm="changeStatus(record, 1)"><a-button :loading="actionKey === actionFor(record, 'status-1')">启用</a-button></a-popconfirm>
+            <a-button v-if="isSuperAdmin" @click="openPasswordReset(record)">重置密码</a-button>
+            <a-popconfirm :title="`确定注销账号 ${record.username} 吗？此操作不可恢复，该账号将立即下线。`" ok-text="注销" ok-type="danger" cancel-text="取消" @confirm="remove(record)"><a-button :loading="actionKey === actionFor(record, 'delete')" danger>注销</a-button></a-popconfirm>
+          </div>
+        </article>
+      </div>
 
       <p v-if="!loading && !errorText && users.length === 0" class="management-empty">{{ filters.keyword || filters.role || filters.status !== undefined ? '未找到符合条件的账号，请调整筛选条件。' : '暂无可管理账号。' }}</p>
       <a-pagination v-if="!errorText && total > filters.pageSize" class="management-pagination" :current="filters.page" :page-size="filters.pageSize" :total="total" :page-size-options="['10', '20']" show-size-changer @change="changePage" />

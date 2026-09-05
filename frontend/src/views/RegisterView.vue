@@ -50,14 +50,14 @@ async function submit() {
 
         <a-form class="auth-form" :model="form" layout="vertical" @finish="submit">
           <a-form-item label="登录名" name="username" :rules="[{ required: true, pattern: /^[A-Za-z0-9_]{3,64}$/, message: '请输入 3 至 64 位字母、数字或下划线' }]">
-            <a-input v-model:value="form.username" autocomplete="username" maxlength="64" />
+            <a-input v-model:value="form.username" autocomplete="username" :maxlength="64" />
             <small id="username-hint">3 至 64 位字母、数字或下划线；`admin` 为保留名称。</small>
           </a-form-item>
           <a-form-item label="邮箱（选填）" name="email" :rules="[{ type: 'email', message: '邮箱格式不正确' }]">
-            <a-input v-model:value="form.email" autocomplete="email" maxlength="255" />
+            <a-input v-model:value="form.email" autocomplete="email" :maxlength="255" />
           </a-form-item>
           <a-form-item label="密码" name="password" :rules="[{ required: true, min: 8, message: '密码至少 8 位' }]">
-            <a-input-password v-model:value="form.password" autocomplete="new-password" maxlength="64" />
+            <a-input-password v-model:value="form.password" autocomplete="new-password" :maxlength="64" />
             <small>密码长度为 8 至 64 位。</small>
           </a-form-item>
           <a-alert v-if="errorMessage" class="form-alert" type="error" :message="errorMessage" show-icon />

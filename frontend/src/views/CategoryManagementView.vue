@@ -105,42 +105,43 @@ onMounted(loadCategories)
       <a-button type="primary" @click="openCreate(null)">新增一级分类</a-button>
     </header>
 
-    <a-card :bordered="false" class="management-card">
-      <a-table
-        :data-source="categories"
-        :loading="loading"
-        :pagination="false"
-        row-key="id"
-        :scroll="{ x: 680 }"
-      >
-        <a-table-column title="分类名称" data-index="name" key="name" />
-        <a-table-column title="层级" key="level" :width="120">
-          <template #default="{ record }">
-            <a-tag :color="record.parentId === null ? 'geekblue' : 'cyan'">{{ record.parentId === null ? '一级分类' : '二级分类' }}</a-tag>
-          </template>
-        </a-table-column>
-        <a-table-column title="排序" data-index="sortOrder" key="sortOrder" :width="100" />
-        <a-table-column title="操作" key="actions" :width="270">
-          <template #default="{ record }">
-            <a-space>
-              <a-button v-if="record.parentId === null" type="link" @click="openCreate(record.id)">新增二级</a-button>
-              <a-button type="link" @click="openEdit(record)">编辑</a-button>
-              <a-popconfirm
-                :title="record.parentId === null
-                  ? '仅当一级分类不含二级分类时才可删除，确定继续吗？'
-                  : '仅当二级分类没有电子书时才可删除，确定继续吗？'"
-                ok-text="删除"
-                cancel-text="取消"
-                @confirm="remove(record)"
-              >
-                <a-button :loading="removingCategoryId === record.id" danger type="link">删除</a-button>
-              </a-popconfirm>
-            </a-space>
-          </template>
-        </a-table-column>
-      </a-table>
-      <p v-if="!loading && categories.length === 0" class="management-empty">暂无分类，请先新增一级分类。</p>
-    </a-card>
+    <section class="management-card category-management-panel" aria-label="分类列表" :aria-busy="loading">
+      <div class="management-summary"><span>共 {{ categories.length }} 个一级分类</span><span>分类将按创建顺序展示在公共书库</span></div>
+      <a-spin :spinning="loading">
+        <div v-if="!loading && categories.length === 0" class="state-panel">
+          <strong>还没有内容分类</strong>
+          <p>先创建一级分类，再在其中添加具体的二级主题。</p>
+          <a-button type="primary" @click="openCreate(null)">新增一级分类</a-button>
+        </div>
+        <div v-else class="category-admin-list">
+          <article v-for="category in categories" :key="category.id" class="category-admin-group">
+            <header>
+              <div><span class="category-order">{{ category.sortOrder }}</span><div><h2>{{ category.name }}</h2><p>{{ category.children.length }} 个二级分类</p></div></div>
+              <a-space wrap>
+                <a-button type="primary" ghost @click="openCreate(category.id)">新增二级分类</a-button>
+                <a-button @click="openEdit(category)">编辑</a-button>
+                <a-popconfirm title="仅当一级分类不含二级分类时才可删除，确定继续吗？" ok-text="删除" cancel-text="取消" @confirm="remove(category)">
+                  <a-button :loading="removingCategoryId === category.id" danger>删除</a-button>
+                </a-popconfirm>
+              </a-space>
+            </header>
+            <div v-if="category.children.length" class="category-admin-children">
+              <div v-for="child in category.children" :key="child.id" class="category-admin-child">
+                <span class="category-child-dot" aria-hidden="true"></span>
+                <div><strong>{{ child.name }}</strong><small>二级分类 · 排序 {{ child.sortOrder }}</small></div>
+                <a-space>
+                  <a-button type="link" @click="openEdit(child)">编辑</a-button>
+                  <a-popconfirm title="仅当二级分类没有电子书时才可删除，确定继续吗？" ok-text="删除" cancel-text="取消" @confirm="remove(child)">
+                    <a-button :loading="removingCategoryId === child.id" danger type="link">删除</a-button>
+                  </a-popconfirm>
+                </a-space>
+              </div>
+            </div>
+            <button v-else type="button" class="category-add-empty" @click="openCreate(category.id)">该分类下暂无二级分类，点击添加主题</button>
+          </article>
+        </div>
+      </a-spin>
+    </section>
 
     <a-modal v-model:open="modalOpen" :confirm-loading="submitting" :title="modalTitle" @ok="submit">
       <a-form layout="vertical" @submit.prevent="submit">

@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { useRoute, useRouter } from 'vue-router'
-import { HeartFilled, HeartOutlined, LeftOutlined, LikeFilled, LikeOutlined, RightOutlined } from '@ant-design/icons-vue'
+import { BookOutlined, HeartFilled, HeartOutlined, LeftOutlined, LikeFilled, LikeOutlined, MenuUnfoldOutlined, RightOutlined } from '@ant-design/icons-vue'
 import { authState } from '../auth/session'
 import { getPublicChapter, getPublicChapters, recordChapterRead, type ChapterDetail, type ChapterItem } from '../chapter/chapter-api'
 import { getPublicEbook, type EbookItem } from '../ebook/ebook-api'
@@ -22,6 +22,7 @@ const requestedChapterId = ref('')
 const interaction = ref<InteractionState | null>(null)
 const interactionLoading = ref<'like' | 'favorite' | null>(null)
 const interactionError = ref('')
+const mobileTocOpen = ref(false)
 
 const activeIndex = computed(() => chapters.value.findIndex((chapter) => chapter.id === activeChapter.value?.id))
 const prevChapter = computed(() => (activeIndex.value > 0 ? chapters.value[activeIndex.value - 1] : null))
@@ -36,6 +37,7 @@ async function openChapter(chapterId: string) {
   requestedChapterId.value = chapterId
   try {
     activeChapter.value = await getPublicChapter(ebookId, chapterId)
+    mobileTocOpen.value = false
     if (route.query.chapter !== chapterId) {
       await router.push({ query: { ...route.query, chapter: chapterId } })
     }
@@ -108,84 +110,103 @@ watch(() => route.query.chapter, (chapterId) => {
 </script>
 
 <template>
-  <main class="reader-page page-shell">
+  <main class="reader-page reader-page-v2">
     <a-spin :spinning="loading">
-      <p v-if="error" class="form-error" role="alert">{{ error }}</p>
-      <a-button v-if="error" @click="load">重新加载</a-button>
+      <div v-if="error" class="state-panel state-panel-error reader-load-error" role="alert">
+        <strong>阅读内容暂时无法加载</strong>
+        <p>{{ error }}</p>
+        <a-button type="primary" @click="load">重新加载</a-button>
+      </div>
+
       <template v-else-if="ebook">
-        <header class="reader-header">
-          <div>
-            <p class="section-kicker">海洋生态 · 在线阅读</p>
-            <h1>{{ ebook.title }}</h1>
-            <p>{{ ebook.summary || '海洋生态数字阅读内容' }}</p>
-            <div class="reader-interaction" aria-label="电子书互动">
-              <span class="reader-like-count" aria-live="polite"><LikeOutlined aria-hidden="true" /> {{ visibleLikeCount }} 人点赞</span>
+        <div class="reader-toolbar">
+          <div class="reader-toolbar-inner">
+            <RouterLink class="reader-back" to="/"><LeftOutlined aria-hidden="true" />返回书库</RouterLink>
+            <div class="reader-book-context">
+              <BookOutlined aria-hidden="true" />
+              <span><small>正在阅读</small><strong>{{ ebook.title }}</strong></span>
+            </div>
+            <div class="reader-toolbar-actions" aria-label="电子书互动">
+              <span class="reader-like-count" aria-live="polite"><LikeOutlined aria-hidden="true" />{{ visibleLikeCount }}</span>
               <template v-if="!authState.user || isReaderUser">
                 <a-button
-                  class="reader-interaction-button"
                   :type="interaction?.liked ? 'primary' : 'default'"
                   :loading="interactionLoading === 'like'"
                   :disabled="interactionLoading !== null"
                   :aria-pressed="interaction?.liked ?? false"
                   @click="toggleInteraction('like')"
-                >
-                  <LikeFilled v-if="interaction?.liked" aria-hidden="true" />
-                  <LikeOutlined v-else aria-hidden="true" />
-                  {{ interaction?.liked ? '已点赞' : '点赞' }}
-                </a-button>
+                ><LikeFilled v-if="interaction?.liked" aria-hidden="true" /><LikeOutlined v-else aria-hidden="true" />{{ interaction?.liked ? '已点赞' : '点赞' }}</a-button>
                 <a-button
-                  class="reader-interaction-button"
                   :type="interaction?.favorited ? 'primary' : 'default'"
                   :loading="interactionLoading === 'favorite'"
                   :disabled="interactionLoading !== null"
                   :aria-pressed="interaction?.favorited ?? false"
                   @click="toggleInteraction('favorite')"
-                >
-                  <HeartFilled v-if="interaction?.favorited" aria-hidden="true" />
-                  <HeartOutlined v-else aria-hidden="true" />
-                  {{ interaction?.favorited ? '已收藏' : '收藏' }}
-                </a-button>
+                ><HeartFilled v-if="interaction?.favorited" aria-hidden="true" /><HeartOutlined v-else aria-hidden="true" />{{ interaction?.favorited ? '已收藏' : '收藏' }}</a-button>
               </template>
+              <a-button class="reader-mobile-toc-button" @click="mobileTocOpen = true"><MenuUnfoldOutlined aria-hidden="true" />目录</a-button>
             </div>
-            <p v-if="interactionError" class="reader-interaction-error" role="alert">{{ interactionError }}</p>
           </div>
-          <div class="reader-header-actions">
-            <img v-if="ebook.coverUrl" class="reader-cover" :src="ebook.coverUrl" :alt="`${ebook.title} 封面`" />
-            <RouterLink class="secondary-button on-dark" to="/">返回书库</RouterLink>
-          </div>
-        </header>
-        <section v-if="chapters.length === 0" class="reader-empty">本书暂未提供可阅读章节。</section>
-        <div v-else class="reader-layout">
-          <aside class="reader-toc" aria-label="章节目录">
+        </div>
+
+        <div class="reader-stage">
+          <aside class="reader-toc reader-toc-v2" aria-label="章节目录">
+            <div class="reader-book-mini">
+              <img v-if="ebook.coverUrl" :src="ebook.coverUrl" :alt="`${ebook.title} 封面`" />
+              <div v-else class="reader-mini-placeholder" aria-hidden="true"><BookOutlined /></div>
+              <div><strong>{{ ebook.title }}</strong><span>{{ chapters.length }} 个章节</span></div>
+            </div>
             <h2>目录</h2>
-            <a-button v-for="chapter in chapters" :key="chapter.id" class="reader-toc-item" block :type="activeChapter?.id === chapter.id ? 'primary' : 'text'" :disabled="chapterLoading" @click="openChapter(chapter.id)"><span>{{ chapter.sortOrder }}.</span>{{ chapter.title }}</a-button>
+            <div class="reader-toc-scroll">
+              <a-button v-for="chapter in chapters" :key="chapter.id" class="reader-toc-item" block :type="activeChapter?.id === chapter.id ? 'primary' : 'text'" :disabled="chapterLoading" @click="openChapter(chapter.id)"><span>{{ chapter.sortOrder }}</span>{{ chapter.title }}</a-button>
+            </div>
           </aside>
-          <article class="reader-article" aria-live="polite" :aria-busy="chapterLoading">
+
+          <section v-if="chapters.length === 0" class="reader-empty">本书暂未提供可阅读章节。</section>
+          <article v-else class="reader-article reader-article-v2" aria-live="polite" :aria-busy="chapterLoading">
+            <div class="reader-article-heading">
+              <p class="reader-chapter-index">CHAPTER {{ activeChapter?.sortOrder || '—' }} · 共 {{ chapters.length }} 章</p>
+              <h1>{{ activeChapter?.title || ebook.title }}</h1>
+              <p class="reader-book-summary">{{ ebook.summary || '海洋生态数字阅读内容' }}</p>
+            </div>
+
+            <p v-if="interactionError" class="reader-inline-error" role="alert">{{ interactionError }}</p>
             <a-alert v-if="chapterError" type="error" :message="chapterError" show-icon />
             <a-button v-if="chapterError" @click="openChapter(requestedChapterId)">重试加载章节</a-button>
             <a-spin :spinning="chapterLoading">
               <template v-if="activeChapter">
-                <p class="reader-chapter-index">第 {{ activeChapter.sortOrder }} 章 · 共 {{ chapters.length }} 章</p>
-                <h2>{{ activeChapter.title }}</h2>
                 <div class="reader-content" v-html="activeChapter.content"></div>
-                <p v-if="activeChapter.sourceNote" class="reader-source">章节来源补充：{{ activeChapter.sourceNote }}</p>
-                <p v-if="ebook.sourceNote" class="reader-source">内容来源说明：{{ ebook.sourceNote }}</p>
+                <details v-if="activeChapter.sourceNote || ebook.sourceNote" class="reader-sources" open>
+                  <summary>查看内容来源</summary>
+                  <p v-if="activeChapter.sourceNote">章节来源补充：{{ activeChapter.sourceNote }}</p>
+                  <p v-if="ebook.sourceNote">内容来源说明：{{ ebook.sourceNote }}</p>
+                </details>
                 <nav class="reader-nav" aria-label="章节上下文导航">
-                  <button v-if="prevChapter" type="button" class="reader-nav-button" @click="openChapter(prevChapter.id)">
-                    <LeftOutlined aria-hidden="true" />
-                    <span class="reader-nav-title">上一章 · {{ prevChapter.title }}</span>
+                  <button v-if="prevChapter" type="button" class="reader-nav-button" :aria-label="`上一章 · ${prevChapter.title}`" @click="openChapter(prevChapter.id)">
+                    <LeftOutlined aria-hidden="true" /><span><small>上一章</small><span class="reader-nav-title">{{ prevChapter.title }}</span></span>
                   </button>
-                  <span v-else class="reader-nav-button is-disabled" aria-disabled="true"><LeftOutlined aria-hidden="true" />已是第一章</span>
-                  <button v-if="nextChapter" type="button" class="reader-nav-button" @click="openChapter(nextChapter.id)">
-                    <span class="reader-nav-title">下一章 · {{ nextChapter.title }}</span>
-                    <RightOutlined aria-hidden="true" />
+                  <span v-else class="reader-nav-button is-disabled" aria-disabled="true"><LeftOutlined aria-hidden="true" /><span><small>上一章</small>已是第一章</span></span>
+                  <button v-if="nextChapter" type="button" class="reader-nav-button is-next" :aria-label="`下一章 · ${nextChapter.title}`" @click="openChapter(nextChapter.id)">
+                    <span><small>下一章</small><span class="reader-nav-title">{{ nextChapter.title }}</span></span><RightOutlined aria-hidden="true" />
                   </button>
-                  <span v-else class="reader-nav-button is-disabled" aria-disabled="true">已是最后一章<RightOutlined aria-hidden="true" /></span>
+                  <span v-else class="reader-nav-button is-disabled is-next" aria-disabled="true"><span><small>下一章</small>已是最后一章</span><RightOutlined aria-hidden="true" /></span>
                 </nav>
               </template>
             </a-spin>
           </article>
         </div>
+
+        <div v-if="!authState.user || isReaderUser" class="reader-mobile-actions" aria-label="移动端电子书互动">
+          <span aria-live="polite"><LikeOutlined aria-hidden="true" />{{ visibleLikeCount }} 人点赞</span>
+          <a-button :type="interaction?.liked ? 'primary' : 'default'" :loading="interactionLoading === 'like'" :disabled="interactionLoading !== null" :aria-pressed="interaction?.liked ?? false" @click="toggleInteraction('like')"><LikeFilled v-if="interaction?.liked" aria-hidden="true" /><LikeOutlined v-else aria-hidden="true" />{{ interaction?.liked ? '已点赞' : '点赞' }}</a-button>
+          <a-button :type="interaction?.favorited ? 'primary' : 'default'" :loading="interactionLoading === 'favorite'" :disabled="interactionLoading !== null" :aria-pressed="interaction?.favorited ?? false" @click="toggleInteraction('favorite')"><HeartFilled v-if="interaction?.favorited" aria-hidden="true" /><HeartOutlined v-else aria-hidden="true" />{{ interaction?.favorited ? '已收藏' : '收藏' }}</a-button>
+        </div>
+
+        <a-drawer v-model:open="mobileTocOpen" placement="left" width="min(340px, 90vw)" title="章节目录">
+          <nav class="reader-drawer-toc">
+            <a-button v-for="chapter in chapters" :key="chapter.id" class="reader-toc-item" block :type="activeChapter?.id === chapter.id ? 'primary' : 'text'" :disabled="chapterLoading" @click="openChapter(chapter.id)"><span>{{ chapter.sortOrder }}</span>{{ chapter.title }}</a-button>
+          </nav>
+        </a-drawer>
       </template>
     </a-spin>
   </main>
