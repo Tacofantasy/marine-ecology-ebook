@@ -1,6 +1,8 @@
 package com.marine.ecobook.ebook.model;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import java.time.LocalDateTime;
 
 @TableName("chapters")
@@ -13,6 +15,7 @@ public class Chapter {
     private Integer sortOrder;
     private String status;
     private Long viewCount;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String sourceNote;
     private Long wordCount;
     private LocalDateTime createdAt;

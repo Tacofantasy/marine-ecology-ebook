@@ -1638,6 +1638,21 @@ a:focus-visible {
 }
 
 /* ---------- 13. 富文本编辑器 ---------- */
+.hero-browse-link {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  margin-top: 20px;
+  color: #e0f7ff;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.hero-browse-link:hover,
+.hero-browse-link:focus-visible {
+  color: #fff;
+}
+
 .rich-text-editor {
   overflow: hidden;
   border: 1px solid var(--ocean-border-strong);

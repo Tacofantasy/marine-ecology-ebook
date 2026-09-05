@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 /**
  * Converts expected application failures into the API envelope.
@@ -83,11 +86,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             ConstraintViolationException.class,
             MissingServletRequestParameterException.class,
+            MissingServletRequestPartException.class,
             MethodArgumentTypeMismatchException.class,
             HttpMessageNotReadableException.class
     })
     public ResponseEntity<ApiResponse<Void>> handleBadRequest(Exception exception) {
         return failure(ResultCode.BAD_REQUEST, ResultCode.BAD_REQUEST.message());
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotFound(NoResourceFoundException exception) {
+        return failure(ResultCode.NOT_FOUND, ResultCode.NOT_FOUND.message());
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUploadTooLarge(MaxUploadSizeExceededException exception) {
+        return failure(ResultCode.BAD_REQUEST, "图片不能超过 5 MB");
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)

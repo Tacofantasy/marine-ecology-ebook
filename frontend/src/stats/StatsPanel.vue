@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { getStatsSummary, getStatsTrend, type StatsSummary, type TrendPoint } from '../stats/stats-api'
 
 const summary = ref<StatsSummary | null>(null)
@@ -9,6 +9,8 @@ const errorText = ref('')
 const chartContainer = ref<HTMLDivElement | null>(null)
 
 let chart: import('echarts/core').ECharts | null = null
+let disposed = false
+let resizeObserver: ResizeObserver | null = null
 
 function formatNumber(value: number | undefined): string {
   if (value === undefined || value === null) return '—'
@@ -24,12 +26,23 @@ function formatReadingTime(minutes: number | undefined): string {
 }
 
 async function loadStats() {
+  if (loading.value) return
   loading.value = true
   errorText.value = ''
   try {
-    const [summaryData, trendData] = await Promise.all([getStatsSummary(), getStatsTrend(30)])
+    const [summaryData, trendData, { init }] = await Promise.all([
+      getStatsSummary(), getStatsTrend(30), import('./chart'),
+    ])
+    if (disposed) return
     summary.value = summaryData
     trend.value = trendData
+    await nextTick()
+    if (disposed || !chartContainer.value) return
+    if (!chart) {
+      chart = init(chartContainer.value)
+      resizeObserver = new ResizeObserver(() => chart?.resize())
+      resizeObserver.observe(chartContainer.value)
+    }
     renderChart()
   } catch (error) {
     errorText.value = error instanceof Error ? error.message : '统计数据加载失败，请稍后重试。'
@@ -86,31 +99,14 @@ function handleResize() {
   chart?.resize()
 }
 
-onMounted(async () => {
-  // ECharts 按需引入：仅注册折线图与所需组件，控制打包体积
-  const [{ use }, { CanvasRenderer }] = await Promise.all([
-    import('echarts/core'),
-    import('echarts/renderers'),
-  ])
-  const [{ LineChart }, { GridComponent }, { TooltipComponent }, { LegendComponent }, { TitleComponent }, { ToolboxComponent }] =
-    await Promise.all([
-      import('echarts/charts'),
-      import('echarts/components'),
-      import('echarts/components'),
-      import('echarts/components'),
-      import('echarts/components'),
-      import('echarts/components'),
-    ])
-  use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, ToolboxComponent])
-  if (chartContainer.value) {
-    const init = (await import('echarts/core')).init
-    chart = init(chartContainer.value)
-  }
+onMounted(() => {
   window.addEventListener('resize', handleResize)
-  await loadStats()
+  void loadStats()
 })
 
 onBeforeUnmount(() => {
+  disposed = true
+  resizeObserver?.disconnect()
   window.removeEventListener('resize', handleResize)
   chart?.dispose()
   chart = null
@@ -122,17 +118,17 @@ onBeforeUnmount(() => {
     <a-spin :spinning="loading">
       <div v-if="errorText" class="stats-error">
         <p>{{ errorText }}</p>
-        <a-button size="small" @click="loadStats">重新加载</a-button>
+        <a-button size="small" :loading="loading" @click="loadStats">重新加载</a-button>
       </div>
 
-      <template v-else>
+      <div v-show="!errorText">
         <div class="stats-cards">
           <div class="stats-card">
-            <p class="stats-label">累计阅读</p>
+            <p class="stats-label" title="当前在库电子书的累计阅读；删除电子书后不再计入">在库累计阅读</p>
             <p class="stats-value">{{ formatNumber(summary?.totalViewCount) }}</p>
           </div>
           <div class="stats-card">
-            <p class="stats-label">累计点赞</p>
+            <p class="stats-label" title="当前保留的点赞记录数；取消点赞或删除电子书后减少">在库累计点赞</p>
             <p class="stats-value">{{ formatNumber(summary?.totalLikeCount) }}</p>
           </div>
           <div class="stats-card">
@@ -156,7 +152,7 @@ onBeforeUnmount(() => {
         <div class="stats-chart-card">
           <div ref="chartContainer" class="stats-chart" role="img" aria-label="近 30 天阅读与点赞趋势图"></div>
         </div>
-      </template>
+      </div>
     </a-spin>
   </section>
 </template>

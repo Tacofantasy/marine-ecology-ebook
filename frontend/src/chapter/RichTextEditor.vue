@@ -16,7 +16,7 @@ const editor = useEditor({
   content: props.modelValue,
   editable: !props.disabled,
   extensions: [
-    StarterKit,
+    StarterKit.configure({ link: false }),
     Image.configure({ inline: false, allowBase64: false }),
     Link.configure({ openOnClick: false, autolink: true, defaultProtocol: 'https' }),
   ],
@@ -55,8 +55,9 @@ function setLink() {
   }
   if (empty) {
     // 空选区时 setLink 只会设置暂存标记（界面上看不到），改为把 URL 本身作为链接文字直接插入
-    const safeUrl = url.replace(/"/g, '%22')
-    editorInstance.chain().focus().insertContent(`<a href="${safeUrl}">${safeUrl}</a>`).run()
+    editorInstance.chain().focus().insertContent({
+      type: 'text', text: url, marks: [{ type: 'link', attrs: { href: url } }],
+    }).run()
     return
   }
   editorInstance.chain().focus().extendMarkRange('link').setLink({ href: url }).run()

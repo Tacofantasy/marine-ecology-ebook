@@ -22,7 +22,7 @@
 
 `GET /api/admin/ebooks?categoryId=&keyword=&page=1&pageSize=10`
 
-返回全部状态的电子书，按最近更新时间倒序。管理端列表与详情不包含 `likeCount` 字段，点赞聚合指标由后续统计模块提供。
+返回全部状态的电子书，按最近更新时间倒序。管理端列表与详情不包含 `likeCount` 字段，点赞聚合指标由首页统计模块提供。
 
 `GET /api/admin/ebooks/{id}`
 

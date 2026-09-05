@@ -111,6 +111,7 @@ public class EbookService {
     @Transactional
     public EbookItem publish(long ebookId) {
         Ebook ebook = requiredEbook(ebookId);
+        assertDraft(ebook);
         assertPublishable(ebook);
         ebook.setStatus("PUBLISHED");
         ebook.setPublishedAt(LocalDateTime.now());

@@ -6,20 +6,6 @@ import { getCategories, type CategoryTreeItem } from '../category/category-api'
 import { getPublicEbooks, type EbookItem } from '../ebook/ebook-api'
 import StatsPanel from '../stats/StatsPanel.vue'
 
-interface HealthPayload {
-  service: string
-  status: string
-}
-
-interface ApiResponse<T> {
-  code: number
-  message: string
-  data: T
-}
-
-const loading = ref(true)
-const healthy = ref(false)
-const statusText = ref('正在检查后端服务…')
 const categoryLoading = ref(true)
 const categoryError = ref('')
 const categories = ref<CategoryTreeItem[]>([])
@@ -31,21 +17,7 @@ const ebookTotal = ref(0)
 const ebookPage = ref(1)
 const ebookPageSize = ref(10)
 const keyword = ref('')
-
-async function checkHealth() {
-  loading.value = true
-  try {
-    const response = await fetch('/api/health')
-    const body = (await response.json()) as ApiResponse<HealthPayload>
-    healthy.value = response.ok && body.code === 0 && body.data.status === 'UP'
-    statusText.value = healthy.value ? `已连接 ${body.data.service}` : '后端服务暂不可用，请确认后端已启动。'
-  } catch {
-    healthy.value = false
-    statusText.value = '无法连接后端，请确认后端已启动。'
-  } finally {
-    loading.value = false
-  }
-}
+let ebookRequest = 0
 
 async function loadCategories() {
   categoryLoading.value = true
@@ -66,6 +38,7 @@ function selectCategory(categoryId: string) {
 }
 
 async function loadEbooks() {
+  const requestId = ++ebookRequest
   ebookLoading.value = true
   ebookError.value = ''
   try {
@@ -75,12 +48,14 @@ async function loadEbooks() {
       page: ebookPage.value,
       pageSize: ebookPageSize.value,
     })
+    if (requestId !== ebookRequest) return
     ebooks.value = data.list
     ebookTotal.value = data.total
   } catch (error) {
+    if (requestId !== ebookRequest) return
     ebookError.value = error instanceof Error ? error.message : '电子书加载失败，请稍后重试。'
   } finally {
-    ebookLoading.value = false
+    if (requestId === ebookRequest) ebookLoading.value = false
   }
 }
 
@@ -100,7 +75,6 @@ function changeEbookPage(page: number, pageSize: number) {
 }
 
 onMounted(() => {
-  void checkHealth()
   void loadCategories()
   void loadEbooks()
 })
@@ -131,16 +105,7 @@ onMounted(() => {
         <RouterLink class="secondary-button on-dark" to="/register">注册账号</RouterLink>
       </div>
 
-      <div class="glass-card" aria-labelledby="service-title">
-        <div>
-          <p id="service-title" class="service-label">系统连接状态</p>
-          <p class="service-status" :class="{ 'is-ready': healthy, 'is-error': !healthy && !loading }" role="status" aria-live="polite">
-            <span class="status-dot" aria-hidden="true"></span>
-            {{ statusText }}
-          </p>
-        </div>
-        <a-button :loading="loading" @click="checkHealth">重新检查</a-button>
-      </div>
+      <a class="hero-browse-link" href="#category-title">无需登录，开始浏览海洋科普内容 ↓</a>
     </section>
 
     <StatsPanel />
@@ -166,6 +131,7 @@ onMounted(() => {
                 :key="child.id"
                 class="category-pill"
                 :type="selectedCategoryId === child.id ? 'primary' : 'default'"
+                :aria-pressed="selectedCategoryId === child.id"
                 @click="selectCategory(child.id)"
               >
                 {{ child.name }}

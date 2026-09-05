@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { message, Modal } from 'ant-design-vue'
+import { useUnsavedChanges } from '../composables/useUnsavedChanges'
+import { message } from 'ant-design-vue'
 import { useRoute, useRouter } from 'vue-router'
 import RichTextEditor from '../chapter/RichTextEditor.vue'
 import {
@@ -16,6 +17,7 @@ const ebook = ref<EbookItem | null>(null)
 const chapters = ref<ChapterItem[]>([])
 const keyword = ref('')
 const loading = ref(false)
+const loadError = ref('')
 const saving = ref(false)
 const ordering = ref(false)
 const drawerOpen = ref(false)
@@ -36,12 +38,13 @@ const filteredChapters = computed(() => {
 
 async function load() {
   loading.value = true
+  loadError.value = ''
   try {
     const [book, items] = await Promise.all([getAdminEbook(ebookId.value), getAdminChapters(ebookId.value)])
     ebook.value = book
     chapters.value = items
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '章节数据加载失败')
+    loadError.value = error instanceof Error ? error.message : '章节数据加载失败'
   } finally {
     loading.value = false
   }
@@ -79,6 +82,7 @@ async function openEdit(chapter: ChapterItem) {
 }
 
 async function save() {
+  if (saving.value) return
   if (!form.title.trim()) {
     message.warning('请输入章节标题')
     return
@@ -130,20 +134,13 @@ async function move(chapter: ChapterItem, direction: -1 | 1) {
   }
 }
 
-function closeDrawer() {
-  if (saving.value) return
-  if (snapshotForm() === initialForm.value) {
-    drawerOpen.value = false
-    return
-  }
-  Modal.confirm({
-    title: '放弃未保存的章节修改？',
-    content: '关闭后，本次未保存的正文和图片引用将丢失。',
-    okText: '放弃修改',
-    cancelText: '继续编辑',
-    okButtonProps: { danger: true },
-    onOk: () => { drawerOpen.value = false },
-  })
+const confirmDiscard = useUnsavedChanges(
+  () => drawerOpen.value && snapshotForm() !== initialForm.value,
+  () => saving.value,
+)
+
+async function closeDrawer() {
+  if (await confirmDiscard()) drawerOpen.value = false
 }
 
 onMounted(() => { void load() })
@@ -166,6 +163,8 @@ onMounted(() => { void load() })
     <a-alert v-if="ebook && !isDraft" class="management-alert" type="info" show-icon message="已发布电子书的章节内容已锁定" description="为避免前台读到未完成内容，请先返回电子书管理页撤回，再进行新增、编辑、删除或排序。" />
 
     <a-card :bordered="false" class="management-card" :loading="loading">
+      <a-alert v-if="loadError" type="error" :message="loadError" show-icon />
+      <a-button v-if="loadError" @click="load">重新加载</a-button>
       <div class="management-toolbar">
         <a-input-search
           v-model:value="keyword"
@@ -177,12 +176,12 @@ onMounted(() => { void load() })
       <p v-if="!loading && chapters.length === 0" class="management-empty">尚未添加章节。至少添加一篇正文非空章节后，电子书才可发布。</p>
       <p v-else-if="!loading && filteredChapters.length === 0" class="management-empty">未找到匹配的章节，请更换关键词。</p>
       <ol v-else class="chapter-management-list">
-        <li v-for="(chapter, index) in filteredChapters" :key="chapter.id" class="chapter-management-item">
-          <div class="chapter-number" aria-hidden="true">{{ index + 1 }}</div>
+        <li v-for="chapter in filteredChapters" :key="chapter.id" class="chapter-management-item">
+          <div class="chapter-number" aria-hidden="true">{{ chapter.sortOrder }}</div>
           <div class="chapter-management-copy"><strong>{{ chapter.title }}</strong><span>{{ chapter.sourceNote || '未填写章节来源补充' }}</span></div>
           <a-space class="chapter-management-actions">
-            <a-button size="small" :disabled="!isDraft || ordering || index === 0" @click="move(chapter, -1)">上移</a-button>
-            <a-button size="small" :disabled="!isDraft || ordering || index === filteredChapters.length - 1" @click="move(chapter, 1)">下移</a-button>
+            <a-button size="small" :disabled="!isDraft || ordering || !!keyword.trim() || chapter.id === chapters[0]?.id" @click="move(chapter, -1)">上移</a-button>
+            <a-button size="small" :disabled="!isDraft || ordering || !!keyword.trim() || chapter.id === chapters[chapters.length - 1]?.id" @click="move(chapter, 1)">下移</a-button>
             <a-button size="small" :disabled="!isDraft" @click="openEdit(chapter)">编辑</a-button>
             <a-popconfirm title="确定删除此章节吗？删除后无法恢复。" ok-text="删除" cancel-text="取消" @confirm="remove(chapter)">
               <a-button size="small" danger :disabled="!isDraft">删除</a-button>
@@ -192,11 +191,12 @@ onMounted(() => { void load() })
       </ol>
     </a-card>
 
-    <a-drawer :open="drawerOpen" :title="drawerTitle" :width="760" :mask-closable="!saving" @close="closeDrawer">
-      <a-form layout="vertical" @submit.prevent="save">
-        <a-form-item label="章节标题" required><a-input v-model:value="form.title" :maxlength="200" @blur="form.title = form.title.trim()" /></a-form-item>
-        <a-form-item label="章节正文" required><RichTextEditor v-model="form.content" :disabled="saving" /><p class="form-hint">支持基础排版、列表、链接和正文图片；保存时会由服务端净化不安全 HTML。</p></a-form-item>
-        <a-form-item label="章节来源补充"><a-textarea v-model:value="form.sourceNote" :maxlength="1000" :rows="3" show-count placeholder="该章节使用不同来源资料时填写。" /></a-form-item>
+    <p v-if="keyword.trim()" class="form-hint">搜索结果保留原目录序号；清空搜索后可调整完整目录顺序。</p>
+    <a-drawer :open="drawerOpen" :title="drawerTitle" width="min(760px, 100vw)" :mask-closable="!saving" @close="closeDrawer">
+      <a-form :model="form" layout="vertical" @submit.prevent="save">
+        <a-form-item name="title" label="章节标题" required><a-input v-model:value="form.title" :maxlength="200" @blur="form.title = form.title.trim()" /></a-form-item>
+        <a-form-item name="content" label="章节正文" required><RichTextEditor v-model="form.content" :disabled="saving" /><p class="form-hint">支持基础排版、列表、链接和正文图片；保存时会由服务端净化不安全 HTML。</p></a-form-item>
+        <a-form-item name="sourceNote" label="章节来源补充"><a-textarea v-model:value="form.sourceNote" :maxlength="1000" :rows="3" show-count placeholder="该章节使用不同来源资料时填写。" /></a-form-item>
         <a-space><a-button type="primary" :loading="saving" @click="save">保存章节</a-button><a-button :disabled="saving" @click="closeDrawer">取消</a-button></a-space>
       </a-form>
     </a-drawer>

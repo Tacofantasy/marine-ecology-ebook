@@ -23,3 +23,6 @@ frontend/.vite/
 # Runtime files
 uploads/
 logs/
+logs-*.txt
+frontend/test-results/
+frontend/playwright-report/

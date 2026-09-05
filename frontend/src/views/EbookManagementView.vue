@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useUnsavedChanges } from '../composables/useUnsavedChanges'
 import { message } from 'ant-design-vue'
 import { getAdminCategories, type CategoryTreeItem } from '../category/category-api'
 import {
@@ -24,6 +25,21 @@ const selectedCover = ref<File | null>(null)
 const coverPreviewUrl = ref('')
 const filters = reactive({ categoryId: undefined as string | undefined, keyword: '', page: 1, pageSize: 10 })
 const form = reactive({ categoryId: undefined as string | undefined, title: '', summary: '', sourceNote: '' })
+const initialForm = ref('')
+let ebookRequest = 0
+const confirmDiscard = useUnsavedChanges(
+  () => modalOpen.value && (JSON.stringify(form) !== initialForm.value || selectedCover.value !== null),
+  () => submitting.value,
+)
+
+async function closeModal() {
+  if (await confirmDiscard()) modalOpen.value = false
+}
+
+function releasePreview() {
+  if (coverPreviewUrl.value.startsWith('blob:')) URL.revokeObjectURL(coverPreviewUrl.value)
+}
+onBeforeUnmount(releasePreview)
 
 const secondaryCategories = computed(() => categories.value.flatMap((root) => root.children))
 const categoryOptions = computed(() => secondaryCategories.value.map((category) => ({
@@ -41,15 +57,23 @@ async function loadCategories() {
 }
 
 async function loadEbooks() {
+  const requestId = ++ebookRequest
   loading.value = true
   try {
     const data = await getAdminEbooks(filters)
+    if (requestId !== ebookRequest) return
+    if (!data.list.length && data.total > 0 && filters.page > 1) {
+      filters.page = Math.max(1, Math.ceil(data.total / filters.pageSize))
+      await loadEbooks()
+      return
+    }
     ebooks.value = data.list
     total.value = data.total
   } catch (error) {
+    if (requestId !== ebookRequest) return
     message.error(error instanceof Error ? error.message : '电子书加载失败，请稍后重试。')
   } finally {
-    loading.value = false
+    if (requestId === ebookRequest) loading.value = false
   }
 }
 
@@ -59,6 +83,7 @@ function search() {
 }
 
 function resetForm() {
+  releasePreview()
   form.categoryId = undefined
   form.title = ''
   form.summary = ''
@@ -70,10 +95,12 @@ function resetForm() {
 function openCreate() {
   editingEbook.value = null
   resetForm()
+  initialForm.value = JSON.stringify(form)
   modalOpen.value = true
 }
 
 function openEdit(ebook: EbookItem) {
+  releasePreview()
   editingEbook.value = ebook
   form.categoryId = ebook.categoryId
   form.title = ebook.title
@@ -81,6 +108,7 @@ function openEdit(ebook: EbookItem) {
   form.sourceNote = ebook.sourceNote ?? ''
   selectedCover.value = null
   coverPreviewUrl.value = ebook.coverUrl ?? ''
+  initialForm.value = JSON.stringify(form)
   modalOpen.value = true
 }
 
@@ -94,12 +122,14 @@ function beforeUpload(file: File) {
     message.error('封面图片不能超过 5 MB')
     return false
   }
+  releasePreview()
   selectedCover.value = file
   coverPreviewUrl.value = URL.createObjectURL(file)
   return false
 }
 
 async function submit() {
+  if (submitting.value) return
   if (!form.categoryId || !form.title.trim()) {
     message.warning('请填写电子书名称并选择二级分类')
     return
@@ -229,12 +259,12 @@ onMounted(async () => {
       <a-pagination class="management-pagination" :current="filters.page" :page-size="filters.pageSize" :total="total" :page-size-options="['10', '20']" show-size-changer @change="changePage" />
     </a-card>
 
-    <a-modal v-model:open="modalOpen" :confirm-loading="submitting" :title="modalTitle" width="680px" @ok="submit">
-      <a-form layout="vertical" @submit.prevent="submit">
-        <a-form-item label="电子书名称" required><a-input v-model:value="form.title" :maxlength="200" @blur="form.title = form.title.trim()" /></a-form-item>
-        <a-form-item label="二级分类" required><a-select v-model:value="form.categoryId" placeholder="请选择二级分类" :options="categoryOptions" /></a-form-item>
-        <a-form-item label="简介"><a-textarea v-model:value="form.summary" :maxlength="500" :rows="4" show-count placeholder="草稿可暂不填写；发布时需填写 20–500 字。" /></a-form-item>
-        <a-form-item label="内容来源说明"><a-textarea v-model:value="form.sourceNote" :maxlength="1000" :rows="4" show-count placeholder="草稿可暂不填写；发布时必填。" /></a-form-item>
+    <a-modal :open="modalOpen" :confirm-loading="submitting" :title="modalTitle" width="680px" :mask-closable="!submitting" :closable="!submitting" :cancel-button-props="{ disabled: submitting }" @cancel="closeModal" @ok="submit">
+      <a-form :model="form" layout="vertical" @submit.prevent="submit">
+        <a-form-item name="title" label="电子书名称" required><a-input v-model:value="form.title" :maxlength="200" @blur="form.title = form.title.trim()" /></a-form-item>
+        <a-form-item name="categoryId" label="二级分类" required><a-select v-model:value="form.categoryId" placeholder="请选择二级分类" :options="categoryOptions" /></a-form-item>
+        <a-form-item name="summary" label="简介"><a-textarea v-model:value="form.summary" :maxlength="500" :rows="4" show-count placeholder="草稿可暂不填写；发布时需填写 20–500 字。" /></a-form-item>
+        <a-form-item name="sourceNote" label="内容来源说明"><a-textarea v-model:value="form.sourceNote" :maxlength="1000" :rows="4" show-count placeholder="草稿可暂不填写；发布时必填。" /></a-form-item>
         <a-form-item label="封面图片"><a-upload accept="image/jpeg,image/png,image/webp" :before-upload="beforeUpload" :show-upload-list="false"><a-button>选择封面图片</a-button></a-upload><p class="form-hint">仅本地预览，保存电子书时才上传。支持 JPEG、PNG、WebP，最大 5 MB。</p><img v-if="coverPreviewUrl" class="cover-preview" :src="coverPreviewUrl" alt="待保存的封面预览" /></a-form-item>
       </a-form>
     </a-modal>

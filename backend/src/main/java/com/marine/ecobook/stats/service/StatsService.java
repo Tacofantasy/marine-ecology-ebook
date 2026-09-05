@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
  *   <li>当日阅读量来自 Redis 日计数键（{@code stats:read:yyyy-MM-dd}，由阅读去重命中时自增，
  *       TTL 7 天防止键堆积）；当日点赞量由 likes.created_at 实时聚合；</li>
  *   <li>累计指标始终从业务表实时聚合，不依赖快照任务是否执行过；</li>
- *   <li>快照写入通过主键 + ON DUPLICATE KEY UPDATE 幂等，支持重复执行与历史回补；</li>
+ *   <li>当日快照可重复刷新，已结算历史快照冻结，避免过期缓存覆盖历史值；</li>
  *   <li>定时任务仅是入口，核心逻辑在普通方法中，便于集成测试直接调用断言。</li>
  * </ul>
  */
@@ -83,24 +83,38 @@ public class StatsService {
             DailyStat stat = byDate.get(date);
             points.add(new TrendPoint(
                     date.format(KEY_DATE_FORMAT),
-                    stat == null ? 0L : stat.getViewDelta(),
-                    stat == null ? 0L : stat.getLikeDelta()));
+                    date.equals(today) ? todayViewCount(today) : stat == null ? 0L : stat.getViewDelta(),
+                    date.equals(today)
+                            ? dailyStatMapper.countLikesBetween(today.atStartOfDay(), today.plusDays(1).atStartOfDay())
+                            : stat == null ? 0L : stat.getLikeDelta()));
         }
         return points;
     }
 
     /**
-     * 生成指定日期的统计快照。重复执行安全：主键冲突时覆盖更新。
-     * 日增阅读量优先取 Redis 日计数键（与阅读去重口径一致）；键已过期时按 0 计。
+     * 生成指定日期的统计快照。当日允许刷新；自然日结束后结算一次并冻结。
+     * Redis 日计数缺失时保留已有阅读增量。累计指标为实际采样时的业务表值。
      */
     public void snapshotDaily(LocalDate date) {
+        if (date.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("不能生成未来日期的统计快照");
+        }
+        // 历史快照完成后冻结；不能用当前累计值或已过期的 Redis 键覆盖历史事实。
+        // updated_at 在统计日之后表示该行已在自然日结束后结算。
+        DailyStat existing = dailyStatMapper.selectById(date);
+        if (date.isBefore(LocalDate.now()) && existing != null
+                && existing.getUpdatedAt() != null
+                && existing.getUpdatedAt().toLocalDate().isAfter(date)) {
+            return;
+        }
         LocalDateTime dayStart = date.atStartOfDay();
         LocalDateTime dayEnd = date.plusDays(1).atStartOfDay();
         DailyStat stat = new DailyStat();
         stat.setStatDate(date);
         stat.setTotalViewCount(dailyStatMapper.sumTotalViewCount());
         stat.setTotalLikeCount(dailyStatMapper.countTotalLikes());
-        stat.setViewDelta(readDailyCount(date));
+        String dailyRead = redisTemplate.opsForValue().get(READ_DAILY_KEY_PREFIX + date.format(KEY_DATE_FORMAT));
+        stat.setViewDelta(dailyRead == null && existing != null ? existing.getViewDelta() : readDailyCount(date));
         stat.setLikeDelta(dailyStatMapper.countLikesBetween(dayStart, dayEnd));
         stat.setPublishedEbookCount(dailyStatMapper.countPublishedEbooks());
         stat.setActiveUserCount(dailyStatMapper.countActiveUsers());
@@ -111,7 +125,7 @@ public class StatsService {
 
     /**
      * 聚合任务入口：每小时把当天实时数据聚合进当日快照行，
-     * 让趋势图的"今天"数据点保持实时（与首页"今日阅读/点赞"卡片同一口径）。
+     * 趋势图的今日数据直接查询实时计数，此任务负责保存采样。
      */
     @org.springframework.scheduling.annotation.Scheduled(cron = "${app.stats.aggregate-cron:0 0 * * * *}")
     public void scheduledAggregateToday() {

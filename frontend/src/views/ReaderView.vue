@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { HeartFilled, HeartOutlined, LeftOutlined, LikeFilled, LikeOutlined, RightOutlined } from '@ant-design/icons-vue'
@@ -17,6 +17,8 @@ const activeChapter = ref<ChapterDetail | null>(null)
 const loading = ref(true)
 const chapterLoading = ref(false)
 const error = ref('')
+const chapterError = ref('')
+const requestedChapterId = ref('')
 const interaction = ref<InteractionState | null>(null)
 const interactionLoading = ref<'like' | 'favorite' | null>(null)
 const interactionError = ref('')
@@ -30,12 +32,17 @@ const visibleLikeCount = computed(() => interaction.value?.likeCount ?? ebook.va
 async function openChapter(chapterId: string) {
   if (activeChapter.value?.id === chapterId || chapterLoading.value) return
   chapterLoading.value = true
+  chapterError.value = ''
+  requestedChapterId.value = chapterId
   try {
     activeChapter.value = await getPublicChapter(ebookId, chapterId)
+    if (route.query.chapter !== chapterId) {
+      await router.push({ query: { ...route.query, chapter: chapterId } })
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' })
     void recordChapterRead(ebookId, chapterId).catch(() => message.warning('阅读记录暂未保存，但不影响继续阅读。'))
   } catch (requestError) {
-    message.error(requestError instanceof Error ? requestError.message : '章节加载失败')
+    chapterError.value = requestError instanceof Error ? requestError.message : '章节加载失败'
   } finally {
     chapterLoading.value = false
   }
@@ -44,6 +51,8 @@ async function openChapter(chapterId: string) {
 async function load() {
   loading.value = true
   error.value = ''
+  interactionError.value = ''
+  activeChapter.value = null
   try {
     const [book, items] = await Promise.all([getPublicEbook(ebookId), getPublicChapters(ebookId)])
     ebook.value = book
@@ -55,7 +64,10 @@ async function load() {
         interactionError.value = requestError instanceof Error ? requestError.message : '互动状态加载失败。'
       }
     }
-    if (items.length > 0) await openChapter(items[0].id)
+    if (items.length > 0) {
+      const requested = typeof route.query.chapter === 'string' ? route.query.chapter : items[0].id
+      await openChapter(requested)
+    }
   } catch (requestError) {
     error.value = requestError instanceof Error ? requestError.message : '阅读内容加载失败，请稍后重试。'
   } finally {
@@ -87,12 +99,19 @@ async function toggleInteraction(type: 'like' | 'favorite') {
 }
 
 onMounted(() => { void load() })
+watch(() => route.query.chapter, (chapterId) => {
+  if (!loading.value && !chapterLoading.value) {
+    const id = typeof chapterId === 'string' ? chapterId : chapters.value[0]?.id
+    if (id) void openChapter(id)
+  }
+})
 </script>
 
 <template>
   <main class="reader-page page-shell">
     <a-spin :spinning="loading">
       <p v-if="error" class="form-error" role="alert">{{ error }}</p>
+      <a-button v-if="error" @click="load">重新加载</a-button>
       <template v-else-if="ebook">
         <header class="reader-header">
           <div>
@@ -142,12 +161,15 @@ onMounted(() => { void load() })
             <a-button v-for="chapter in chapters" :key="chapter.id" class="reader-toc-item" block :type="activeChapter?.id === chapter.id ? 'primary' : 'text'" :disabled="chapterLoading" @click="openChapter(chapter.id)"><span>{{ chapter.sortOrder }}.</span>{{ chapter.title }}</a-button>
           </aside>
           <article class="reader-article" aria-live="polite" :aria-busy="chapterLoading">
+            <a-alert v-if="chapterError" type="error" :message="chapterError" show-icon />
+            <a-button v-if="chapterError" @click="openChapter(requestedChapterId)">重试加载章节</a-button>
             <a-spin :spinning="chapterLoading">
               <template v-if="activeChapter">
                 <p class="reader-chapter-index">第 {{ activeChapter.sortOrder }} 章 · 共 {{ chapters.length }} 章</p>
                 <h2>{{ activeChapter.title }}</h2>
                 <div class="reader-content" v-html="activeChapter.content"></div>
                 <p v-if="activeChapter.sourceNote" class="reader-source">章节来源补充：{{ activeChapter.sourceNote }}</p>
+                <p v-if="ebook.sourceNote" class="reader-source">内容来源说明：{{ ebook.sourceNote }}</p>
                 <nav class="reader-nav" aria-label="章节上下文导航">
                   <button v-if="prevChapter" type="button" class="reader-nav-button" @click="openChapter(prevChapter.id)">
                     <LeftOutlined aria-hidden="true" />

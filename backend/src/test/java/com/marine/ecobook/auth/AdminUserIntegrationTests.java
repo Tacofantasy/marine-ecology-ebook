@@ -214,6 +214,85 @@ class AdminUserIntegrationTests {
                 .path("data").path("list").path(0).path("id").isTextual());
     }
 
+    @Test
+    void superAdministratorCanCreateAndResetSubAdministratorPassword() throws Exception {
+        User superAdmin = createUser(UserRole.SUPER_ADMIN);
+        String superToken = login(superAdmin.getUsername());
+        String username = "operator" + suffix();
+
+        mockMvc.perform(post("/api/admin/users/administrators")
+                        .header("satoken", superToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"%s","displayName":"运营管理员","email":"%s@example.com","password":"initialpass"}
+                                """.formatted(username, username)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.role").value("ADMIN"))
+                .andExpect(jsonPath("$.data.status").value(1));
+
+        User administrator = userMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User>()
+                .eq(User::getUsername, username));
+        String oldToken = login(username, "initialpass");
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/admin/users/{id}/password", administrator.getId())
+                        .header("satoken", superToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"updatedpass\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/auth/me").header("satoken", oldToken))
+                .andExpect(status().isUnauthorized());
+        assertNotNull(login(username, "updatedpass"));
+    }
+
+    @Test
+    void administratorCanDisableAndEnableRegularUserOnly() throws Exception {
+        User administrator = createUser(UserRole.ADMIN);
+        String administratorToken = login(administrator.getUsername());
+        User target = createUser(UserRole.USER);
+        String targetToken = login(target.getUsername());
+
+        mockMvc.perform(post("/api/admin/users/administrators")
+                        .header("satoken", administratorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"blocked_admin\",\"displayName\":\"Blocked\",\"password\":\"password123\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/admin/users/{id}/password", target.getId())
+                        .header("satoken", administratorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"updatedpass\"}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/admin/users/{id}/status", target.getId())
+                        .header("satoken", administratorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":0}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/auth/me").header("satoken", targetToken))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/admin/users")
+                        .header("satoken", administratorToken)
+                        .param("status", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[0].id").value(String.valueOf(target.getId())));
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/admin/users/{id}/status", target.getId())
+                        .header("satoken", administratorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":1}"))
+                .andExpect(status().isOk());
+        assertNotNull(login(target.getUsername()));
+
+        User anotherAdministrator = createUser(UserRole.ADMIN);
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/admin/users/{id}/status", anotherAdministrator.getId())
+                        .header("satoken", administratorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":0}"))
+                .andExpect(status().isForbidden());
+    }
+
     // ------------------------------------------------------------------
     // 辅助方法
     // ------------------------------------------------------------------
@@ -235,9 +314,13 @@ class AdminUserIntegrationTests {
     }
 
     private String login(String username) throws Exception {
+        return login(username, "password123");
+    }
+
+    private String login(String username, String password) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"account\":\"%s\",\"password\":\"password123\"}".formatted(username)))
+                        .content("{\"account\":\"%s\",\"password\":\"%s\"}".formatted(username, password)))
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("token").asText();

@@ -57,6 +57,21 @@ class EbookIntegrationTests {
     private JdbcTemplate jdbcTemplate;
 
     @Test
+    void optionalTextCanBeClearedAndStaysClearedAfterReload() throws Exception {
+        String token = login(createUser(UserRole.ADMIN).getUsername());
+        long categoryId = secondLevelCategory().getId();
+        long id = createDraft(token, categoryId, "清空草稿" + suffix());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/admin/ebooks/{id}", id)
+                        .header("satoken", token).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"categoryId\":%d,\"title\":\"清空草稿\",\"summary\":\"\",\"sourceNote\":\"\"}".formatted(categoryId)))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/admin/ebooks/{id}", id).header("satoken", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.summary").doesNotExist())
+                .andExpect(jsonPath("$.data.sourceNote").doesNotExist());
+    }
+
+    @Test
     void regularUserCannotManageEbooks() throws Exception {
         String token = login(createUser(UserRole.USER).getUsername());
         mockMvc.perform(get("/api/admin/ebooks").header("satoken", token))

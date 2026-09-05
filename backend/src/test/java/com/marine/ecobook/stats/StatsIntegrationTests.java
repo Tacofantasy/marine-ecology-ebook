@@ -67,6 +67,27 @@ class StatsIntegrationTests {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Test
+    void todayTrendMatchesLiveSummaryBeforeSnapshot() {
+        LocalDate today = LocalDate.now();
+        statsService.incrementReadCount(today);
+        assertEquals(statsService.summary().todayViewCount(), statsService.trend(1).get(0).viewDelta());
+    }
+
+    @Test
+    void finalizedHistoryIsNotOverwrittenAfterRedisExpires() {
+        LocalDate date = LocalDate.now().minusDays(8);
+        jdbcTemplate.update("""
+                INSERT INTO daily_stats (stat_date, total_view_count, view_delta, like_delta)
+                VALUES (?, 120, 12, 3)
+                """, date);
+        statsService.snapshotDaily(date);
+        DailyStat saved = dailyStatMapper.selectById(date);
+        assertEquals(120L, saved.getTotalViewCount());
+        assertEquals(12L, saved.getViewDelta());
+        assertEquals(3L, saved.getLikeDelta());
+    }
+
     // ------------------------------------------------------------------
     // 1. 快照任务幂等：同一天重复执行 snapshotDaily 数值不叠加、仅一行
     // ------------------------------------------------------------------
@@ -164,7 +185,7 @@ class StatsIntegrationTests {
             assertEquals(5, array.get(1).path("viewDelta").asLong(), "昨日快照的日增阅读量应为 5");
             assertEquals(2, array.get(1).path("likeDelta").asLong(), "昨日快照的日增点赞量应为 2");
             assertEquals(0, array.get(0).path("viewDelta").asLong(), "缺失日期应补零");
-            assertEquals(0, array.get(2).path("viewDelta").asLong(), "今日尚无快照应补零");
+            assertEquals(statsService.todayViewCount(today), array.get(2).path("viewDelta").asLong(), "今日趋势应与实时卡片一致");
         } finally {
             jdbcTemplate.update("DELETE FROM daily_stats WHERE stat_date = ?", yesterday);
         }

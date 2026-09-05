@@ -3,6 +3,7 @@ package com.marine.ecobook.stats.model;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @TableName("daily_stats")
 public class DailyStat {
@@ -23,6 +24,11 @@ public class DailyStat {
     private Long activeUserCount;
 
     private Long totalWordCount;
+
+    private LocalDateTime updatedAt;
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
     public LocalDate getStatDate() {
         return statDate;

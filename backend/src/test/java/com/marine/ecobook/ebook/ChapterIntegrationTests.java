@@ -60,6 +60,24 @@ class ChapterIntegrationTests {
     private JdbcTemplate jdbcTemplate;
 
     @Test
+    void rejectsNumericAliasesInOrderAndClearsOptionalSource() throws Exception {
+        String token = login(createUser(UserRole.ADMIN).getUsername());
+        long ebookId = createDraft(token);
+        long first = createChapter(token, ebookId, "第一章", "<p>正文</p>");
+        createChapter(token, ebookId, "第二章", "<p>正文</p>");
+        mockMvc.perform(put("/api/admin/ebooks/{id}/chapters/order", ebookId)
+                        .header("satoken", token).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("chapterIds", List.of("" + first, "0" + first)))))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(put("/api/admin/ebooks/{id}/chapters/{chapterId}", ebookId, first)
+                        .header("satoken", token).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"第一章\",\"content\":\"<p>正文</p>\",\"sourceNote\":\"\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/admin/ebooks/{id}/chapters/{chapterId}", ebookId, first).header("satoken", token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.sourceNote").doesNotExist());
+    }
+
+    @Test
     void administratorCanManageDraftChaptersAndSanitizesHtml() throws Exception {
         String token = login(createUser(UserRole.ADMIN).getUsername());
         long ebookId = createDraft(token);

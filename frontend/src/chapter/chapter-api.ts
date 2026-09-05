@@ -66,5 +66,5 @@ export function getPublicChapter(ebookId: string, chapterId: string) {
 }
 
 export function recordChapterRead(ebookId: string, chapterId: string) {
-  return apiRequest<void>(`/api/ebooks/${ebookId}/chapters/${chapterId}/read`, { method: 'POST' })
+  return apiRequest<void>(`/api/ebooks/${ebookId}/chapters/${chapterId}/read`, { method: 'POST' }, true)
 }

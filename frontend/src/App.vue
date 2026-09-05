@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
+import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { authState, clearSession } from './auth/session'
 import { logout as logoutRequest } from './auth/auth-api'
 
 const router = useRouter()
+
+watch(() => authState.token, (token, previousToken) => {
+  if (!token && previousToken && router.currentRoute.value.meta.requiresAuth) {
+    void router.replace({ name: 'login', query: { redirect: router.currentRoute.value.fullPath } })
+  }
+})
 
 const marineTheme = {
   token: {
@@ -51,7 +58,7 @@ async function logout() {
 </script>
 
 <template>
-  <a-config-provider :theme="marineTheme">
+  <a-config-provider :theme="marineTheme" :locale="zhCN" :auto-insert-space-in-button="false">
     <a class="skip-link" href="#main-content">跳到主要内容</a>
 
     <a-layout class="app-shell">
@@ -88,7 +95,7 @@ async function logout() {
         </div>
       </a-layout-header>
 
-      <a-layout-content id="main-content" class="app-main"><RouterView /></a-layout-content>
+      <div id="main-content" class="app-main ant-layout-content"><RouterView :key="$route.path" /></div>
 
       <footer class="site-footer">
         <svg class="footer-wave" viewBox="0 0 1440 72" preserveAspectRatio="none" aria-hidden="true">

@@ -14,7 +14,7 @@ public interface DailyStatMapper extends BaseMapper<DailyStat> {
 
     /**
      * 幂等快照写入：stat_date 为主键，冲突时用本次计算值覆盖。
-     * 快照任务因此可以安全地重复执行或回补历史日期，重跑不会产生重复行或数值叠加。
+     * 服务层限制历史快照的再次写入；当日重跑不会产生重复行或数值叠加。
      */
     @Insert("""
             INSERT INTO daily_stats
@@ -30,7 +30,8 @@ public interface DailyStatMapper extends BaseMapper<DailyStat> {
                 like_delta = VALUES(like_delta),
                 published_ebook_count = VALUES(published_ebook_count),
                 active_user_count = VALUES(active_user_count),
-                total_word_count = VALUES(total_word_count)
+                total_word_count = VALUES(total_word_count),
+                updated_at = CURRENT_TIMESTAMP
             """)
     int upsert(DailyStat stat);
 

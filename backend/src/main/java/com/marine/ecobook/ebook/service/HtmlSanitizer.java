@@ -3,6 +3,7 @@ package com.marine.ecobook.ebook.service;
 import org.owasp.html.HtmlPolicyBuilder;
 import org.owasp.html.PolicyFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.HtmlUtils;
 
 /**
  * Centralized HTML sanitizer using OWASP Java HTML Sanitizer.
@@ -58,9 +59,7 @@ public class HtmlSanitizer {
         if (sanitized.isBlank()) {
             return "";
         }
-        return sanitized
-                .replaceAll("<[^>]*>", "")
-                .replace("&nbsp;", " ")
+        return HtmlUtils.htmlUnescape(sanitized.replaceAll("<[^>]*>", ""))
                 .replace('\u00a0', ' ')
                 .trim();
     }

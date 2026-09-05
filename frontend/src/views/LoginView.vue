@@ -13,6 +13,7 @@ const errorMessage = ref('')
 const submitting = ref(false)
 
 async function submit() {
+  if (submitting.value) return
   errorMessage.value = ''
   submitting.value = true
   try {
@@ -34,7 +35,7 @@ async function submit() {
     <aside class="auth-brand" aria-hidden="true">
       <p class="eyebrow">WELCOME BACK</p>
       <h2>回到蔚蓝书海，继续你的阅读之旅</h2>
-      <p class="auth-brand-copy">登录后可浏览全部已发布电子书，并参与后续的点赞与收藏互动。</p>
+      <p class="auth-brand-copy">访客可自由阅读已发布电子书，登录后还可点赞、收藏，保存感兴趣的海洋科普内容。</p>
       <ul class="auth-brand-points">
         <li><CheckCircleOutlined />按主题分类浏览海洋科普内容</li>
         <li><CheckCircleOutlined />沉浸式章节阅读与目录导航</li>

@@ -111,10 +111,7 @@ public class ChapterService {
         if (request.chapterIds().size() != chapters.size()) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "章节数量与该书现有章节数不一致");
         }
-        Set<String> idSet = new HashSet<>(request.chapterIds());
-        if (idSet.size() != request.chapterIds().size()) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "排序数组包含重复的章节 ID");
-        }
+        Set<Long> idSet = new HashSet<>();
         Set<Long> existingIds = new HashSet<>(chapters.stream().map(Chapter::getId).toList());
         for (String idStr : request.chapterIds()) {
             long id;
@@ -122,6 +119,9 @@ public class ChapterService {
                 id = Long.parseLong(idStr);
             } catch (NumberFormatException e) {
                 throw new BusinessException(ResultCode.BAD_REQUEST, "章节 ID 格式不正确: " + idStr);
+            }
+            if (!idSet.add(id)) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "排序数组包含重复的章节 ID");
             }
             if (!existingIds.contains(id)) {
                 throw new BusinessException(ResultCode.NOT_FOUND, "章节不存在或不属于该电子书: " + idStr);
@@ -263,7 +263,7 @@ public class ChapterService {
             throw new BusinessException(ResultCode.BAD_REQUEST, "请输入章节正文");
         }
         String sanitized = htmlSanitizer.sanitize(content);
-        String plainText = htmlSanitizer.toPlainText(content);
+        String plainText = htmlSanitizer.toPlainText(sanitized);
         if (plainText.isEmpty()) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "章节正文不能为空");
         }

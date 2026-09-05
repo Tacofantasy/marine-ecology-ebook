@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { CheckCircleOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
 import { ApiError } from '../api/client'
 import { register } from '../auth/auth-api'
 
@@ -12,13 +13,15 @@ const successMessage = ref('')
 const submitting = ref(false)
 
 async function submit() {
+  if (submitting.value) return
   errorMessage.value = ''
   successMessage.value = ''
   submitting.value = true
   try {
     await register({ username: form.username.trim(), email: form.email.trim(), password: form.password })
     successMessage.value = '注册成功，正在跳转登录页面…'
-    window.setTimeout(() => router.replace('/login'), 700)
+    message.success('注册成功，请登录')
+    await router.replace('/login')
   } catch (error) {
     errorMessage.value = error instanceof ApiError ? error.message : '网络连接失败，请稍后重试。'
     submitting.value = false
@@ -31,7 +34,7 @@ async function submit() {
     <aside class="auth-brand" aria-hidden="true">
       <p class="eyebrow">JOIN THE PLATFORM</p>
       <h2>创建一个账号，收藏属于你的海洋知识</h2>
-      <p class="auth-brand-copy">注册成为平台用户，即可阅读已发布电子书，并参与后续的点赞与收藏功能。</p>
+      <p class="auth-brand-copy">注册后即可点赞、收藏已发布电子书，随时回到感兴趣的海洋知识。</p>
       <ul class="auth-brand-points">
         <li><CheckCircleOutlined />登录名注册后不可修改，请谨慎选择</li>
         <li><CheckCircleOutlined />昵称用于页面欢迎语与公共展示</li>
@@ -43,7 +46,7 @@ async function submit() {
       <a-card class="auth-card" :bordered="false" aria-labelledby="register-title">
         <p class="section-kicker">JOIN THE PLATFORM</p>
         <h1 id="register-title">创建账号</h1>
-        <p class="auth-intro">注册后可参与后续的点赞与收藏功能。</p>
+        <p class="auth-intro">注册后可点赞电子书，并从“我的收藏”继续阅读。</p>
 
         <a-form class="auth-form" :model="form" layout="vertical" @finish="submit">
           <a-form-item label="登录名" name="username" :rules="[{ required: true, pattern: /^[A-Za-z0-9_]{3,64}$/, message: '请输入 3 至 64 位字母、数字或下划线' }]">

@@ -1,6 +1,8 @@
 package com.marine.ecobook.ebook.model;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import java.time.LocalDateTime;
 
 @TableName("ebooks")
@@ -10,9 +12,11 @@ public class Ebook {
     private Long categoryId;
     private String title;
     private String coverUrl;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String summary;
     private String status;
     private Long viewCount;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String sourceNote;
     private LocalDateTime publishedAt;
     private LocalDateTime createdAt;

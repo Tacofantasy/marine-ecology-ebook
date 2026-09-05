@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { authState } from '../auth/session'
+import { authState, refreshUser } from '../auth/session'
+import { getCurrentUser } from '../auth/auth-api'
+import { message } from 'ant-design-vue'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import ProfileView from '../views/ProfileView.vue'
@@ -63,10 +65,23 @@ const router = createRouter({
       name: 'reader',
       component: () => import('../views/ReaderView.vue'),
     },
+    { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../views/NotFoundView.vue') },
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to, from) => {
+  if (authState.token && (to.meta.requiresAuth || to.meta.guestOnly || !from.matched.length)) {
+    const token = authState.token
+    try {
+      const user = await getCurrentUser()
+      if (token === authState.token) refreshUser(user)
+    } catch (error) {
+      if (authState.token && to.meta.requiresAuth) {
+        message.error(error instanceof Error ? error.message : '无法验证登录状态，请重试。')
+        return false
+      }
+    }
+  }
   if (to.meta.requiresAuth && !authState.token) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
